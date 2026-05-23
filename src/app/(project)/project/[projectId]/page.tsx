@@ -1,14 +1,19 @@
-import ProjectView from "@/features/ProjectView/ProjectView"
+import ProjectHeader from "@/components/Shared/ProjectHeader";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
+import ProjectView from "@/features/ProjectView/ProjectView";
 
 const project = async ({ params }: { params: Promise<{ projectId: string }> }) => {
     const { projectId } = await params
 
+    prefetch(trpc.project.getProject.queryOptions({ projectId: Number(projectId) }))
+    prefetch(trpc.message.getMessages.queryOptions({ projectId: Number(projectId) }))
+
     return (
         <>
-            {/* <ProjectHeader projectId={projectId} />
-            <ProjectChat projectId={projectId} /> */}
-            <ProjectView projectId={projectId} />
-            <div>{projectId}</div>
+            <HydrateClient>
+                <ProjectHeader projectId={Number(projectId)} />
+                <ProjectView projectId={Number(projectId)}/>
+            </HydrateClient>
         </>
     )
 }

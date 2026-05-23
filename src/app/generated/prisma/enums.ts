@@ -9,7 +9,19 @@
 * 🟢 You can import this file directly.
 */
 
+export const ProjectStatus = {
+  DRAFT: 'DRAFT',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+} as const
+
+export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const MessageRole = {
+  AI: 'AI',
+  USER: 'USER'
+} as const
+
+export type MessageRole = (typeof MessageRole)[keyof typeof MessageRole]

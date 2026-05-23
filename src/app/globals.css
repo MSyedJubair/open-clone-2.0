@@ -50,17 +50,17 @@
   --color-app-bg: #09090b;
   --color-app-surface: #18181b;
   
-  /* Brand Accents */
+  
   --color-brand-indigo: var(--color-indigo-500);
   --color-brand-purple: var(--color-purple-500);
   --color-brand-pink: var(--color-pink-500);
 
-  /* Status Colors */
+  
   --color-status-live: var(--color-emerald-400);
   --color-status-draft: var(--color-amber-400);
   --color-status-token: var(--color-yellow-500);
 
-  /* Custom Animations (Replacing the <style> tag) */
+  
   --keyframes-drift: {
     0% { transform: translate(0px, 0px) scale(1); }
     33% { transform: translate(30px, -50px) scale(1.1); }
