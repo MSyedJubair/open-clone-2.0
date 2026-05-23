@@ -22,9 +22,48 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  token         Int       @default(1000)
+  projects      Project[]
 
   @@unique([email])
   @@map("user")
+}
+
+model Project {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String
+  files       String
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  status ProjectStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+}
+
+enum ProjectStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Message {
+  id        Int         @id @default(autoincrement())
+  role      MessageRole
+  message   String
+  projectId Int
+  project   Project     @relation(fields: [projectId], references: [id])
+}
+
+enum MessageRole {
+  AI
+  USER
 }
 
 model Session {

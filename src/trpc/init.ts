@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 import { initTRPC, TRPCError } from '@trpc/server';
 
 /**
@@ -11,8 +12,11 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     headers: opts.headers 
   });
 
+  const db = prisma
+
   return { 
-    session 
+    session,
+    db
   };
 };
 
@@ -41,5 +45,5 @@ export const protectedProcedure = baseProcedure.use(async ({ ctx, next }) => {
     })
   }
 
-  return next({ ctx: { ...ctx, session: ctx.session } })
+  return next({ ctx: { ...ctx, session: ctx.session, db: ctx.db } })
 })
