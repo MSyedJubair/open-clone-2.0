@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
+import DirectoryContextProvider from "@/context/DirectoryContextProvider";
 
 const monstSerrat = Montserrat()
 
@@ -21,7 +22,11 @@ export default function RootLayout({
       className={`${monstSerrat.className} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col">
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <DirectoryContextProvider>
+            {children}
+          </DirectoryContextProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );

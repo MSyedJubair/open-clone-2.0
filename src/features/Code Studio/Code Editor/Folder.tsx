@@ -17,10 +17,11 @@ interface TreeNode {
 interface FolderProps {
   name: string
   data: TreeNode
-  level: number
+  level: number,
+  path: string
 }
 
-const Folder = ({ name, data, level }: FolderProps) => {
+const Folder = ({ name, data, level, path }: FolderProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = data.directory && Object.keys(data.directory).length > 0
 
@@ -56,13 +57,13 @@ const Folder = ({ name, data, level }: FolderProps) => {
               if (childData.directory) {
                 return (
                   <li key={fileName}>
-                    <Folder name={fileName} data={childData} level={level + 1} />
+                    <Folder name={fileName} data={childData} level={level + 1} path={path + '/' + fileName} />
                   </li>
                 )
               } else if (childData.file) {
                 return (
                   <li key={fileName}>
-                    <File name={fileName} data={childData.file} level={level + 1} />
+                    <File name={fileName} data={childData.file.contents} level={level + 1} path={path + '/' + fileName} />
                   </li>
                 )
               }
