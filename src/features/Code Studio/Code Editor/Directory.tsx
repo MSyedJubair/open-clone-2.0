@@ -7,25 +7,22 @@ import File from "./File"
 import Folder from "./Folder"
 import { useTRPC } from "@/trpc/client"
 import { useSuspenseQuery } from "@tanstack/react-query"
+import { useContext, useEffect } from "react"
+import DirectoryContext from "@/context/DirectoryContext"
 
-interface FileData {
-  contents: string
-}
-
-interface TreeNode {
-  directory?: { [nodeName: string]: TreeNode }
-  file?: FileData
-}
 
 const Directory = ({ projectId }: { projectId: number }) => {
   const trpc = useTRPC()
   const { data: project } = useSuspenseQuery(
     trpc.project.getProject.queryOptions({ projectId: projectId })
   )
-  
-  const files: Record<string, TreeNode> = project?.files 
-    ? JSON.parse(project.files) 
-    : {}
+  const context = useContext(DirectoryContext)
+
+  useEffect(() => {
+    if (project?.files) {
+      context.setFiles(JSON.parse(project.files));
+    }
+  }, [])
 
   return (
     <Card className="w-full max-w-xs border-border bg-card shadow-sm rounded-lg overflow-hidden h-full">
@@ -36,9 +33,9 @@ const Directory = ({ projectId }: { projectId: number }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2">
-        <ScrollArea className="h-[450px] w-full pr-2">
+        <ScrollArea className="h-112.5 w-full pr-2">
           <ul className="space-y-0.5 token-tree-root">
-            {Object.entries(files).map(([name, data]) => {
+            {Object.entries(context.files).map(([name, data]) => {
               if (data && 'directory' in data) {
                 return (
                   <li key={name}>
@@ -48,7 +45,7 @@ const Directory = ({ projectId }: { projectId: number }) => {
               }
               return null
             })}
-            {Object.entries(files).map(([name, data]) => {
+            {Object.entries(context.files).map(([name, data]) => {
               if (data && 'file' in data && data.file) {
                 return (
                   <li key={name}>

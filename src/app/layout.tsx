@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
 import DirectoryContextProvider from "@/context/DirectoryContextProvider";
+import { Toaster } from "sonner";
 
 const monstSerrat = Montserrat()
 
@@ -25,6 +26,7 @@ export default function RootLayout({
         <TRPCReactProvider>
           <DirectoryContextProvider>
             {children}
+            <Toaster/>
           </DirectoryContextProvider>
         </TRPCReactProvider>
       </body>

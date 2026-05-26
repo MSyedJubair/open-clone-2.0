@@ -18,14 +18,15 @@ const File = ({ name, data, level = 1, path }: FileProps) => {
     <div
       style={{ paddingLeft: `${level * 16 + 24}px` }}
       className={`flex items-center gap-2 py-1.5 pr-2 rounded-md hover:bg-muted/50 text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors group select-none ${context.filePath === path
-          ? 'bg-muted text-foreground'
-          : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+        ? 'bg-muted text-foreground'
+        : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
         }`}
       onClick={() => {
-        context.setFilePath(path)
-        context.setFileCode(data)
-        console.log(path)
-        console.log(data)
+        if (context.filePath === path) {
+          context.setFilePath('')
+        } else {
+          context.setFilePath(path)
+        }        
       }}
     >
 

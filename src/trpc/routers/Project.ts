@@ -217,8 +217,33 @@ export const Project = createTRPCRouter({
 
         return project.id
 
-      } catch(error) {
+      } catch (error) {
         console.error("Project creation failed:", error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR'
+        })
+      }
+    }),
+
+  saveProjectFile: protectedProcedure
+    .input(z.object({
+      projectId: z.number(),
+      files: z.string()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const project = await ctx.db.project.update({
+          where: {
+            id: input.projectId
+          },
+          data: {
+            files: input.files
+          }
+        })
+
+        return project
+
+      } catch {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR'
         })

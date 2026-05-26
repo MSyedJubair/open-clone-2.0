@@ -1,23 +1,30 @@
 'use client'
 
-import { ChevronRight, Clock } from "lucide-react"
+import { ChevronRight, Clock, SaveAll } from "lucide-react"
 import Image from "next/image"
 import { timeAgo } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
-import { useSuspenseQuery  } from "@tanstack/react-query"
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
+import { Button } from "@base-ui/react"
+import { useContext } from "react"
+import DirectoryContext from "@/context/DirectoryContext"
+import { Spinner } from "../ui/spinner"
+import { toast } from "sonner"
 
 const ProjectHeader = ({ projectId }: { projectId: number }) => {
   const trpc = useTRPC()
-  const { data: project, isLoading: isProjectLoading } = useSuspenseQuery (
+  const { data: project, isLoading: isProjectLoading } = useSuspenseQuery(
     trpc.project.getProject.queryOptions({ projectId: projectId })
   )
+  const context = useContext(DirectoryContext);
   const { data: session, isPending: isUserLoading } = authClient.useSession()
+  const { mutateAsync: saveFiles, isPending: isSavingFiles } = useMutation(trpc.project.saveProjectFile.mutationOptions())
 
   const getStatusStyles = (status?: string) => {
     if (!status) return { text: "text-zinc-500", dot: "bg-zinc-500" }
-    
+
     switch (status) {
       case "COMPLETED":
       case "LIVE":
@@ -34,8 +41,8 @@ const ProjectHeader = ({ projectId }: { projectId: number }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/50 bg-[var(--color-app-bg)]/80 backdrop-blur-xl">
       <div className="flex h-14 items-center justify-between px-6">
-        
-        
+
+
         <div className="flex items-center gap-3 overflow-hidden">
           <Link
             href="/"
@@ -58,7 +65,7 @@ const ProjectHeader = ({ projectId }: { projectId: number }) => {
           <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
 
           {isProjectLoading ? (
-            
+
             <div className="flex items-center gap-3 animate-pulse">
               <div className="h-4 w-28 rounded bg-zinc-800" />
               <div className="hidden h-5 w-20 rounded-full bg-zinc-800/60 lg:block" />
@@ -77,8 +84,30 @@ const ProjectHeader = ({ projectId }: { projectId: number }) => {
           )}
         </div>
 
-        
+
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
+            {/* Desktop-only wrapper that handles the divider line */}
+            <div className="hidden sm:flex items-center pr-4 border-r border-zinc-800/60">
+              <Button
+                onClick={async () => {
+                  await saveFiles({
+                    projectId: projectId,
+                    files: JSON.stringify(context.files),
+                  });
+                  toast('Project Saved.')
+                }}
+                disabled={isSavingFiles}
+                className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-300 bg-[var(--color-app-surface)] hover:bg-zinc-800/40 border border-zinc-800/80 rounded-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingFiles ? <Spinner className="w-4 h-4 transition-transform text-zinc-400" /> : <SaveAll className={`w-4 h-4 transition-transform text-zinc-400`} />}
+                <span>
+                  {isSavingFiles ? 'Saving' : 'Save'}
+                </span>
+              </Button>
+            </div>
+          </div>
+
           {!isProjectLoading && project?.status && (
             <div className="hidden sm:flex items-center gap-3 pr-4 border-r border-zinc-800/60">
               <div className="flex items-center gap-2 text-[12px] bg-[var(--color-app-surface)] px-2.5 py-1 rounded-lg border border-zinc-800/40 cursor-default">
@@ -91,7 +120,7 @@ const ProjectHeader = ({ projectId }: { projectId: number }) => {
           )}
 
           {isUserLoading ? (
-            
+
             <div className="flex items-center gap-3 animate-pulse">
               <div className="hidden h-3 w-16 rounded bg-zinc-800 md:block" />
               <div className="h-9 w-9 rounded-full bg-zinc-800" />
