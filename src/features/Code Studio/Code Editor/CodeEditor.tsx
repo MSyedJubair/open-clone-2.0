@@ -11,16 +11,19 @@ const AllotmentNoSSR = dynamic(() => import('allotment').then((mod) => mod.Allot
   ssr: false,
 })
 
-const CodeEditor = ({ projectId }: { projectId: number }) => {
+const CodeEditor = () => {
   return (
-    // 3. Ensure the parent wrapper has an explicit height/width
-    <div style={{ height: '100vh', width: '100%' }}>
-      <AllotmentNoSSR>
-        <Allotment.Pane minSize={100} maxSize={250} snap>
-          <Directory projectId={projectId}/>
+    <div className='h-full w-full'>
+      <AllotmentNoSSR separator>
+        <Allotment.Pane minSize={100} maxSize={350} preferredSize={250} snap>
+          <div style={{ paddingRight: "10px", height: "100%", width: '100%' }}>
+            <Directory />
+          </div>
         </Allotment.Pane>
-        <Allotment.Pane>
-          <MoncaoEditor/>
+        <Allotment.Pane >
+          <div style={{ paddingLeft: "10px", height: "100%", width: '100%' }}>
+            <MoncaoEditor />
+          </div>
         </Allotment.Pane>
       </AllotmentNoSSR>
     </div>

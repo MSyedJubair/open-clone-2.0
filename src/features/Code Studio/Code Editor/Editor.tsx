@@ -106,7 +106,7 @@ export default function MonacoEditor() {
               minimap: { enabled: false },
               fontSize: 14,
               padding: {
-                top: 16,
+              top: 16,
               },
               smoothScrolling: true,
               cursorBlinking: "smooth",
@@ -120,6 +120,3 @@ export default function MonacoEditor() {
     </div>
   );
 }
-
-//https://xhamster.com/videos/unforgettable-sex-with-such-a-cutie-always-ends-with-a-dripping-creampie-best-of-hottiestwo-xhEXDRb
-//https://xhamster.com/videos/ex-girlfriend-wants-hardcore-sex-after-party-with-clear-hindi-audio-xhnSwtm

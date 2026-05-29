@@ -24,6 +24,17 @@ interface FolderProps {
 const Folder = ({ name, data, level, path }: FolderProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = data.directory && Object.keys(data.directory).length > 0
+  const sortedEntries = Object.entries(data.directory || {}).sort(([nameA, dataA], [nameB, dataB]) => {
+    const isFolderA = dataA && 'directory' in dataA
+    const isFolderB = dataB && 'directory' in dataB
+
+    // Condition 1: Folders first
+    if (isFolderA && !isFolderB) return -1
+    if (!isFolderA && isFolderB) return 1
+
+    // Condition 2: Alphabetical sorting if they are the same type
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' })
+  })
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full select-none">
@@ -53,7 +64,7 @@ const Folder = ({ name, data, level, path }: FolderProps) => {
       <CollapsibleContent className="transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
         {hasChildren && (
           <ul className="list-none m-0 p-0 mt-0.5 space-y-0.5">
-            {Object.entries(data.directory || {}).map(([fileName, childData]) => {
+            {sortedEntries.map(([fileName, childData]) => {
               if (childData.directory) {
                 return (
                   <li key={fileName}>

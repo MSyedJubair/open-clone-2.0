@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure } from '../init';
+import { baseProcedure, createTRPCRouter, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 
 export const Project = createTRPCRouter({
@@ -247,6 +247,28 @@ export const Project = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR'
         })
+      }
+    }),
+  getProjects: baseProcedure
+    .input(z.object({
+      authorId: z.string().optional()
+    }))
+    .query(async ({ input, ctx }) => {
+      try {
+        if (input.authorId) {
+          const projects = await ctx.db.project.findMany({
+            where: {
+              authorId: input.authorId
+            }
+          })
+
+          return projects
+        } else {
+          const projects = await ctx.db.project.findMany()
+          return projects
+        }
+      } catch (error) {
+        console.error(error);
       }
     })
 });

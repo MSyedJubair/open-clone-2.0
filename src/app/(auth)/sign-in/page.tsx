@@ -141,7 +141,7 @@ const SignIn = () => {
 
         <div className="text-center text-sm text-zinc-500 mt-4">
           Don&apos;t have an account?{" "}
-          <a href="/signup" className="text-white hover:text-[var(--color-brand-indigo)] font-medium transition-colors underline underline-offset-4">
+          <a href="/sign-up" className="text-white hover:text-[var(--color-brand-indigo)] font-medium transition-colors underline underline-offset-4">
             Sign up
           </a>
         </div>
