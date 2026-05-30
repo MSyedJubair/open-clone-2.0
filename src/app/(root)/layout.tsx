@@ -1,4 +1,4 @@
-import { Sidebar } from '@/components/Shared/SideBar';
+import { Sidebar } from '@/components/Shared/SideBar/SideBar';
 import React from 'react'
 
 const RootLayout = ({

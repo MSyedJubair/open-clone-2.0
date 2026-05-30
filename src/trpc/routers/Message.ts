@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure } from '../init';
+import { createTRPCRouter, protectedProcedure, authorizedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 
 export const Message = createTRPCRouter({
@@ -24,7 +24,7 @@ export const Message = createTRPCRouter({
             }
         }),
 
-    sendMessage: protectedProcedure
+    sendMessage: authorizedProcedure
         .input(z.object({
             projectId: z.number(),
             message: z.string()

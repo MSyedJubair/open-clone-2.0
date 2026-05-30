@@ -1,17 +1,18 @@
 import ProjectsView from "@/features/Projects/ProjectsView";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { FolderGit2, Plus, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
+import { FolderGit2, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import NewProject from "@/components/Shared/NewProject";
 
 const ProjectMe = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
   const user = session?.user;
+  const isAuthenticated = Boolean(user)
 
-  // Guard clause for unauthenticated users
   if (!user?.id) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6">
@@ -22,8 +23,8 @@ const ProjectMe = async () => {
         <p className="text-zinc-400 max-w-sm mb-6 text-sm">
           Please sign in to view your personal dashboard and manage your projects.
         </p>
-        <Link 
-          href="/login" 
+        <Link
+          href="/login"
           className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors"
         >
           Sign In
@@ -33,17 +34,17 @@ const ProjectMe = async () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 relative">
-      
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-app-bg text-zinc-100 relative">
+
+      <div className="absolute top-0 right-0 w-100 h-100 bg-indigo-500/5 blur-[100px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
-        
-        
-        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 shadow-xl">
+
+
+        <div className="bg-linear-to-r from-zinc-900 via-zinc-900/90 to-zinc-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4.5">
-            
-            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800 border-2 border-white/10 ring-4 ring-indigo-500/10 flex-shrink-0">
+
+            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-800 border-2 border-white/10 ring-4 ring-indigo-500/10 shrink-0">
               {user.image ? (
                 <Image
                   src={user.image}
@@ -59,15 +60,12 @@ const ProjectMe = async () => {
               )}
             </div>
 
-            
+
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-white">
                   {user.name || "My Workspace"}
                 </h1>
-                <span className="text-[10px] font-semibold px-2 py-0.5 bg-zinc-800 border border-white/10 text-zinc-400 rounded-md tracking-wider uppercase">
-                  Creator
-                </span>
               </div>
               <p className="text-sm text-zinc-400 font-light">
                 Manage your creative deployments, files, and public showcases.
@@ -75,37 +73,25 @@ const ProjectMe = async () => {
             </div>
           </div>
 
-          
+
           <div className="flex items-center gap-3 self-end sm:self-center">
-            <Link 
+            <Link
               href="/settings"
-              className="p-2.5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-all"
+              className="p-2.5 bg-white/2 hover:bg-white/6 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-all"
               title="Account Settings"
             >
               <Settings className="w-4 h-4" />
             </Link>
-
-            <Link
-              href="/project/new"
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/10 hover:shadow-indigo-500/20 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Project</span>
-            </Link>
+            <NewProject isAuthenticated={isAuthenticated} />
           </div>
         </div>
 
-        
+
         <section className="space-y-6">
           <div className="flex items-center gap-2 pb-4 border-b border-white/5">
             <FolderGit2 className="w-4 h-4 text-indigo-400" />
             <h2 className="text-lg font-semibold text-white">Your Projects</h2>
-            <span className="ml-1.5 px-2 py-0.5 text-xs bg-white/5 border border-white/5 rounded-full text-zinc-400 font-medium">
-              Private Dashboard View
-            </span>
           </div>
-
-          
           <ProjectsView authorId={user.id} />
         </section>
 

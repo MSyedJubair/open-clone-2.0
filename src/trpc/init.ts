@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { initTRPC, TRPCError } from '@trpc/server';
+import z from 'zod';
 
 /**
  * This context creator accepts `headers` so it can be reused in both
@@ -9,12 +10,12 @@ import { initTRPC, TRPCError } from '@trpc/server';
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await auth.api.getSession({
-    headers: opts.headers 
+    headers: opts.headers
   });
 
   const db = prisma
 
-  return { 
+  return {
     session,
     db
   };
@@ -40,10 +41,32 @@ export const baseProcedure = t.procedure;
 export const protectedProcedure = baseProcedure.use(async ({ ctx, next }) => {
   if (!ctx.session) {
     throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'UNAUTHORIZED'
+      code: 'FORBIDDEN',
+      message: 'UNAUTHENTICATED'
     })
   }
 
   return next({ ctx: { ...ctx, session: ctx.session, db: ctx.db } })
 })
+export const authorizedProcedure = protectedProcedure
+  .input(
+    z.object({
+      projectId: z.number()
+    })
+  )
+  .use(async ({ ctx, next, input }) => {
+    const project = await ctx.db.project.findUnique({
+      where: {
+        id: input.projectId
+      }
+    })
+
+    if (project?.authorId !== ctx.session.user.id) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED'
+      })
+    }
+
+    return next({ ctx: { ...ctx, session: ctx.session, db: ctx.db } })
+
+  })

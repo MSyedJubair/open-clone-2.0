@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { baseProcedure, createTRPCRouter, protectedProcedure } from '../init';
+import { authorizedProcedure, baseProcedure, createTRPCRouter, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 
 export const Project = createTRPCRouter({
@@ -225,7 +225,7 @@ export const Project = createTRPCRouter({
       }
     }),
 
-  saveProjectFile: protectedProcedure
+  saveProjectFile: authorizedProcedure
     .input(z.object({
       projectId: z.number(),
       files: z.string()
