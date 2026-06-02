@@ -1,7 +1,7 @@
 import NewProject from '@/components/Shared/NewProject'
+import PromptInput from '@/components/Shared/PromptInput'
 import ProjectsView from '@/features/Projects/ProjectsView'
 import { auth } from '@/lib/auth'
-import prisma from '@/lib/prisma'
 import { Zap } from 'lucide-react'
 import { headers } from "next/headers"
 import Link from 'next/link'
@@ -44,6 +44,8 @@ const page = async () => {
                 build today?
               </span>
             </h1>
+
+            <PromptInput isAuthenticated={isAuthenticated}/>
 
           </div>
 

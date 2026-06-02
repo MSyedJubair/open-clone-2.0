@@ -11,14 +11,14 @@ import {
     Home,
     Folder,
     Layers,
-    User
+    Settings
 } from "lucide-react";
 
 const navItems = [
     { name: "Home", href: "/", icon: Home },
     { name: "Projects", href: "/projects", icon: Folder },
     { name: "MyProjects", href: "/projects/me", icon: Layers },
-    { name: "Profile", href: "/profile", icon: User },
+    { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 const SideBarItems = ({ isCollapsed }: { isCollapsed: boolean }) => {

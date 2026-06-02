@@ -7,9 +7,10 @@ const RootLayout = ({
     children: React.ReactNode;
 }>) => {
     return (
-        <div className='flex flex-row w-full'>
+        <div className="flex h-screen w-full">
             <Sidebar />
-            <main className='w-full'>
+
+            <main className="flex-1 overflow-y-auto">
                 {children}
             </main>
         </div>

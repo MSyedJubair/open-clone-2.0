@@ -46,31 +46,24 @@ export const Message = createTRPCRouter({
                     }
                 })
 
-                // if (project?.status === 'DRAFT') {
-                //     inngest.send({
-                //         name: 'buildCode',
-                //         data: {
-                //             userReq: input.message,
-                //             projectId: input.projectId,
-                //         }
-                //     })
-                // } else {
-                //     console.log('EditCode')
-                //     inngest.send({
-                //         name: 'editCode',
-                //         data: {
-                //             userReq: input.message,
-                //             projectId: input.projectId,
-                //         }
-                //     })
-                // }
-                inngest.send({
-                    name: 'buildCode',
-                    data: {
-                        userReq: input.message,
-                        projectId: input.projectId,
-                    }
-                })
+                if (project?.status === 'DRAFT') {
+                    inngest.send({
+                        name: 'buildCode',
+                        data: {
+                            userReq: input.message,
+                            projectId: input.projectId,
+                        }
+                    })
+                } else {
+                    console.log('EditCode')
+                    inngest.send({
+                        name: 'editCode',
+                        data: {
+                            userReq: input.message,
+                            projectId: input.projectId,
+                        }
+                    })
+                }
 
                 await ctx.db.project.update({
                     where: {
