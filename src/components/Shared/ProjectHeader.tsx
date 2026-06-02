@@ -4,10 +4,10 @@ import { ChevronRight, Clock, SaveAll, Lock } from "lucide-react"
 import Image from "next/image"
 import { timeAgo } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
-import { useContext } from "react"
+import { useContext, useEffect } from "react"
 import DirectoryContext from "@/context/DirectoryContext"
 import { Spinner } from "../ui/spinner"
 import { toast } from "sonner"
@@ -17,21 +17,35 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from "@/components/ui/dialog"
+import ProjectContext from "@/context/ProjectContext"
+import Pusher from "pusher-js"
+
+const pusher = new Pusher(
+  process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  {
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  }
+)
+
 
 const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAuthorized: boolean }) => {
   const trpc = useTRPC()
+  const queryclient = useQueryClient()
+
   const { data: project, isLoading: isProjectLoading } = useSuspenseQuery(
     trpc.project.getProject.queryOptions({ projectId: projectId })
   )
-  const context = useContext(DirectoryContext);
+
+  const directoryContext = useContext(DirectoryContext);
+  const projectContext = useContext(ProjectContext)
+
   const { data: session, isPending: isUserLoading } = authClient.useSession()
   const { mutateAsync: saveFiles, isPending: isSavingFiles } = useMutation(trpc.project.saveProjectFile.mutationOptions())
+
+  const projectQueryKey = trpc.project.getProject.queryKey({ projectId: projectId })
+  const messageQueryKey = trpc.message.getMessages.queryKey({ projectId: projectId })
 
   const getStatusStyles = (status?: string) => {
     if (!status) return { text: "text-zinc-500", dot: "bg-zinc-500" }
@@ -48,10 +62,43 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
     }
   }
 
-  const statusStyle = getStatusStyles(project?.status)
+  const statusStyle = getStatusStyles(projectContext.status)
+
+  useEffect(() => {
+    projectContext.setStatus(project?.status || 'DRAFT')
+  }, [project])
+
+  useEffect(() => {
+    const channel = pusher.subscribe(projectId.toString());
+    console.log('Done Subscribe')
+
+    type data = { text: string, timeStamp: number, status: string }
+
+    channel.bind('build-status', (data: data) => {
+      console.log(data)
+      if (data.status === 'generating') {
+        toast('Building the project. You can close your browser or do something else.')
+
+      } else if (data.status === 'completed') {
+        toast('Generation completed. Updating your project...')
+        queryclient.invalidateQueries({ queryKey: projectQueryKey })
+        queryclient.invalidateQueries({ queryKey: messageQueryKey })
+
+      } else if (data.status === 'failed') {
+        toast('Generation failed. Please try again later.')
+        queryclient.invalidateQueries({ queryKey: projectQueryKey })
+        queryclient.invalidateQueries({ queryKey: messageQueryKey })
+      }
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe(projectId.toString());
+    };
+  }, [projectId])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-800/50 bg-[var(--color-app-bg)]/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-zinc-800/50 bg-app-bg/80 backdrop-blur-xl">
       <div className="flex h-14 items-center justify-between px-6">
 
         <div className="flex items-center gap-3 overflow-hidden">
@@ -125,12 +172,12 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
                 onClick={async () => {
                   await saveFiles({
                     projectId: projectId,
-                    files: JSON.stringify(context.files),
+                    files: JSON.stringify(directoryContext.files),
                   });
                   toast('Project Saved.')
                 }}
                 disabled={isSavingFiles}
-                className="flex items-center gap-2 h-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 bg-[var(--color-app-surface)] border-zinc-800/80 hover:bg-zinc-800 hover:text-zinc-100 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center gap-2 h-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 bg-(--color-app-surface) border-zinc-800/80 hover:bg-zinc-800 hover:text-zinc-100 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
               >
                 {isSavingFiles ? (
                   <Spinner className="w-3.5 h-3.5 text-zinc-400 transition-transform" />
@@ -149,7 +196,7 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
               <div className="flex items-center gap-2 text-[12px] bg-(--color-app-surface) px-2.5 py-1 rounded-lg border border-zinc-800/40 cursor-default">
                 <div className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot} animate-pulse`} />
                 <span className={`font-semibold tracking-wide text-[10px] uppercase ${statusStyle.text}`}>
-                  {project.status}
+                  {projectContext.status}
                 </span>
               </div>
             </div>

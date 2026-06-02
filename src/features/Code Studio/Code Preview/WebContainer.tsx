@@ -61,7 +61,7 @@ export default function WebContainerPreview() {
 
         installProcess.output.pipeTo(
           new WritableStream({
-            write(data) { console.log(data); },
+            write(data) { console.log() },
           })
         );
 
@@ -105,7 +105,7 @@ export default function WebContainerPreview() {
   return (
     <div className='w-full h-full'>
       <h1>{status}</h1>
-      <iframe src={iframeUrl || ''} className='h-full w-full'></iframe>
+      <iframe src={iframeUrl || undefined} className='h-full w-full'></iframe>
     </div>
   )
 }

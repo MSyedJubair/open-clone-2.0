@@ -4,12 +4,16 @@ import { Button, Input } from "@base-ui/react"
 import { Send } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "@/trpc/client"
-import { useState } from "react"
+import { useState, useContext } from "react"
 import { Message } from "@/app/generated/prisma/client"
+import ProjectContext from "@/context/ProjectContext"
+import { toast } from "sonner"
 
 const MessageInput = ({ projectId }: { projectId: number }) => {
     const trpc = useTRPC()
     const queryClient = useQueryClient()
+
+    const projectContext = useContext(ProjectContext)
 
     const [message, setMessage] = useState('')
 
@@ -57,13 +61,16 @@ const MessageInput = ({ projectId }: { projectId: number }) => {
         const messageToSend = message
         setMessage('')
 
+        projectContext.setStatus('PROCESSING')
+
         try {
             await sendMessage({
                 projectId: projectId,
                 message: messageToSend
             })
-        } catch{
+        } catch {
             setMessage(messageToSend)
+            toast('Something Went Wrong')
         }
     }
 
