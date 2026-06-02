@@ -5,8 +5,6 @@ import { FileSystemTree as WCFileTree, WebContainer } from '@webcontainer/api';
 import DirectoryContext from '@/context/DirectoryContext';
 import { FileSystemTree } from '@/lib/types';
 
-type DeviceMode = 'desktop' | 'tablet' | 'mobile' | 'free';
-
 function getFileNode(tree: FileSystemTree, path: string) {
   const parts = path.split('/');
   let current: FileSystemTree | undefined = tree;
@@ -28,16 +26,29 @@ function getFileNode(tree: FileSystemTree, path: string) {
   return null;
 }
 
+type TreeSignature = Array<
+  [name: string, children: TreeSignature | null]
+>;
+
+function getTreeStructureSignature(tree: FileSystemTree) {
+  const serialize = (node: FileSystemTree): TreeSignature =>
+    Object.entries(node)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) =>
+        value.directory ? [key, serialize(value.directory)] : [key, null]
+      );
+
+  return JSON.stringify(serialize(tree));
+}
+
 export default function WebContainerPreview() {
   const [status, setStatus] = useState('Idle');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const webcontainerRef = useRef<WebContainer | null>(null);
+  const structureSignatureRef = useRef<string>('');
   
   const isBootingRef = useRef(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
-
-  // Responsive device view state
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>('free');
 
   const context = useContext(DirectoryContext);
 
@@ -55,13 +66,14 @@ export default function WebContainerPreview() {
 
         setStatus('Writing initial files...');
         await instance.mount(context.files as unknown as WCFileTree);
+        structureSignatureRef.current = getTreeStructureSignature(context.files);
 
         setStatus('Installing dependencies...');
         const installProcess = await instance.spawn('npm', ['install']);
 
         installProcess.output.pipeTo(
           new WritableStream({
-            write(data) { console.log() },
+            write(data) { console.log(data) },
           })
         );
 
@@ -90,16 +102,32 @@ export default function WebContainerPreview() {
 
   useEffect(() => {
     if (!isContainerReady || !webcontainerRef.current) return;
+    if (JSON.stringify(context.files) === '{}') return;
 
-    try {
-      const wc = webcontainerRef.current;
-      const updatedNode = getFileNode(context.files, context.filePath);
-      const updatedCode = updatedNode?.file?.contents || '';
+    const syncFiles = async () => {
+      try {
+        const wc = webcontainerRef.current!;
+        const nextSignature = getTreeStructureSignature(context.files);
 
-      wc.fs.writeFile(context.filePath, updatedCode);
-    } catch (error) {
-      console.error('Failed to update file inside WebContainer:', error);
-    }
+        if (structureSignatureRef.current !== '' && nextSignature !== structureSignatureRef.current) {
+          setStatus('Syncing project file tree...');
+          await wc.mount(context.files as unknown as WCFileTree);
+          structureSignatureRef.current = nextSignature;
+          return;
+        }
+
+        structureSignatureRef.current = nextSignature;
+
+        const updatedNode = getFileNode(context.files, context.filePath);
+        const updatedCode = updatedNode?.file?.contents || '';
+
+        await wc.fs.writeFile(context.filePath, updatedCode);
+      } catch (error) {
+        console.error('Failed to update file inside WebContainer:', error);
+      }
+    };
+
+    syncFiles();
   }, [context.files, context.filePath, isContainerReady]);
 
   return (

@@ -60,8 +60,11 @@ export const buildCode = inngest.createFunction(
         triggers: { event: "buildCode" },
         retries: 1,
         onFailure: async ({ event, error }) => {
-            // @ts-expect-error: event is a generic type. Even though projectId is passed ts is dumb shit. 
-            const projectId = event.data?.projectId;
+
+            const originalEvent = event.data.event;
+            const projectId = originalEvent.data.projectId;
+
+            console.log(projectId);
 
             await pusherServer.trigger(
                 String(projectId),

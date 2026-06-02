@@ -20,15 +20,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import ProjectContext from "@/context/ProjectContext"
-import Pusher from "pusher-js"
-
-const pusher = new Pusher(
-  process.env.NEXT_PUBLIC_PUSHER_KEY!,
-  {
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-  }
-)
-
+import { default as Pusher } from "pusher-js"
 
 const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAuthorized: boolean }) => {
   const trpc = useTRPC()
@@ -66,9 +58,16 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
 
   useEffect(() => {
     projectContext.setStatus(project?.status || 'DRAFT')
-  }, [project])
+  }, [project?.status])
 
   useEffect(() => {
+    const pusher = new Pusher(
+      process.env.NEXT_PUBLIC_PUSHER_KEY!,
+      {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      }
+    )
+
     const channel = pusher.subscribe(projectId.toString());
     console.log('Done Subscribe')
 

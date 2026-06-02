@@ -21,7 +21,7 @@ const CodeStudio = ({ projectId }: { projectId: number }) => {
     if (project?.files) {
       context.setFiles(JSON.parse(project.files));
     }
-  }, [])
+  }, [project?.files])
 
   return (
     <div className="w-full h-full mx-auto border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50/50 dark:bg-zinc-950 shadow-sm">
