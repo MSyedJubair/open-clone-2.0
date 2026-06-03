@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [name, setName] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  
+
   // Status states
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -48,20 +48,26 @@ export default function SettingsPage() {
     try {
       let finalImageUrl = previewUrl
 
-      // --- NOTE ON FILE UPLOADS ---
-      // If a new file was dropped, upload it to your storage provider 
-      // (e.g., Uploadthing, Cloudinary, S3 API route) first:
+      // If a new file was dropped, upload it to our API route handler first
       if (file) {
-        // const formData = new FormData()
-        // formData.append("file", file)
-        // const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
-        // const uploadData = await uploadRes.json()
-        // finalImageUrl = uploadData.url
-        
-        // Temporary placeholder showing local object URL behavior:
-        finalImageUrl = previewUrl 
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData
+        })
+
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json()
+          throw new Error(errorData.error || "Failed to upload your avatar image.")
+        }
+
+        const uploadData = await uploadRes.json()
+        finalImageUrl = uploadData.url // Your fresh, secure Cloudinary URL
       }
 
+      // Update user account details with Better-Auth client
       const { error } = await authClient.updateUser({
         name: name,
         image: finalImageUrl || undefined,
@@ -71,10 +77,14 @@ export default function SettingsPage() {
         setMessage({ type: 'error', text: error.message || "Failed to update profile." })
       } else {
         setMessage({ type: 'success', text: "Profile updated successfully!" })
+        setFile(null) // Reset pending file reference state
         refetch() // Refresh client auth session cache
       }
     } catch (err) {
-      setMessage({ type: 'error', text: "An unexpected error occurred." })
+      setMessage({
+        type: 'error',
+        text: String(err) || "An unexpected error occurred during processing."
+      })
     } finally {
       setIsSaving(false)
     }
@@ -84,7 +94,7 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     try {
       await authClient.signOut()
-      router.push("/login") // or whatever your auth route path is
+      router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -92,7 +102,7 @@ export default function SettingsPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-app-bg)] text-zinc-400">
+      <div className="min-h-screen flex items-center justify-center bg-(--color-app-bg) text-zinc-400">
         Loading accounts configuration...
       </div>
     )
@@ -101,7 +111,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-(--color-app-bg) text-zinc-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto space-y-8">
-        
+
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-zinc-800 gap-4">
           <div>
@@ -119,14 +129,14 @@ export default function SettingsPage() {
         {/* Profile Update Card */}
         <div className="bg-(--color-app-surface) rounded-2xl p-6 sm:p-8 border border-zinc-800/80 shadow-xl">
           <h2 className="text-xl font-semibold text-white mb-6">Profile Information</h2>
-          
+
           <form onSubmit={handleUpdateProfile} className="space-y-6">
-            
+
             {/* Avatar Dropzone Field */}
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-3">Profile Picture</label>
               <div className="flex flex-col sm:flex-row items-center gap-6">
-                
+
                 {/* Visual Circle Preview */}
                 <div className="relative w-24 h-24 rounded-full bg-zinc-900 border-2 border-zinc-700 shrink-0 overflow-hidden flex items-center justify-center">
                   {previewUrl ? (
@@ -140,13 +150,12 @@ export default function SettingsPage() {
                 </div>
 
                 {/* React Dropzone Core Interface */}
-                <div 
-                  {...getRootProps()} 
-                  className={`w-full border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-200 outline-none ${
-                    isDragActive 
-                      ? 'border-(--color-brand-pink) bg-zinc-800/30' 
+                <div
+                  {...getRootProps()}
+                  className={`w-full border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-200 outline-none ${isDragActive
+                      ? 'border-(--color-brand-pink) bg-zinc-800/30'
                       : 'border-zinc-700 hover:border-(--color-brand-indigo) bg-zinc-900/40'
-                  }`}
+                    }`}
                 >
                   <input {...getInputProps()} />
                   <p className="text-sm text-zinc-300">
@@ -175,11 +184,10 @@ export default function SettingsPage() {
 
             {/* Submission / Actions Feedback */}
             {message && (
-              <div className={`p-4 rounded-xl text-sm ${
-                message.type === 'success' 
-                  ? 'bg-emerald-950/40 text-(--color-status-live) border border-emerald-800/50' 
+              <div className={`p-4 rounded-xl text-sm ${message.type === 'success'
+                  ? 'bg-emerald-950/40 text-(--color-status-live) border border-emerald-800/50'
                   : 'bg-red-950/40 text-red-400 border border-red-900/50'
-              }`}>
+                }`}>
                 {message.text}
               </div>
             )}

@@ -90,17 +90,16 @@ const SideBarUser = ({ isCollapsed }: { isCollapsed: boolean }) => {
                         className="w-52 bg-zinc-900 text-zinc-200 border-zinc-800 shadow-xl rounded-lg"
                     >
                         <DropdownMenuItem className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer gap-2 text-xs py-2">
-                            <Settings className="h-3.5 w-3.5 text-zinc-400" /> Account Settings
+                            <button onClick={() => {
+                                router.push('/settings')
+                            }}>
+                                <Settings className="h-3.5 w-3.5 text-zinc-400" /> Account Settings
+                            </button>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="focus:bg-red-950/40 focus:text-red-400 text-red-400/90 cursor-pointer gap-2 text-xs py-2">
-                            <button onClick={() => {
-                                authClient.signOut({
-                                    fetchOptions: {
-                                        onSuccess: () => {
-                                            router.push('/')
-                                        }
-                                    }
-                                })
+                            <button onClick={async () => {
+                                await authClient.signOut()
+                                router.push('/')
                             }} className="flex flex-row gap-2"><LogOut className="h-3.5 w-3.5" /> Log out</button>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
