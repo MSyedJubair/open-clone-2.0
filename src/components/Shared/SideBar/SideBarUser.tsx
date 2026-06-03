@@ -92,7 +92,7 @@ const SideBarUser = ({ isCollapsed }: { isCollapsed: boolean }) => {
                         <DropdownMenuItem className="focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer gap-2 text-xs py-2">
                             <button onClick={() => {
                                 router.push('/settings')
-                            }}>
+                            }} className="flex flex-row gap-2">
                                 <Settings className="h-3.5 w-3.5 text-zinc-400" /> Account Settings
                             </button>
                         </DropdownMenuItem>
