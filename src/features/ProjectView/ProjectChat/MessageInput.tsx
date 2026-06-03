@@ -21,37 +21,36 @@ const MessageInput = ({ projectId }: { projectId: number }) => {
     const projectQueryKey = trpc.project.getProject.queryKey()
 
     const { mutateAsync: sendMessage } = useMutation({
-        ...trpc.message.sendMessage.mutationOptions(),
-        onMutate: async (variables) => {
-            await queryClient.cancelQueries({ queryKey: messagesQueryKey })
+        ...trpc.message.sendMessage.mutationOptions({
+            onMutate: async (variables) => {
+                await queryClient.cancelQueries({ queryKey: messagesQueryKey })
 
-            const previousMessages = queryClient.getQueryData<Message[]>(messagesQueryKey)
+                const previousMessages = queryClient.getQueryData(messagesQueryKey)
 
-            queryClient.setQueryData<Message[]>(messagesQueryKey, (old) => {
-                const optimisticMessage: Message = {
-                    id: Date.now(),
-                    role: 'USER',
-                    message: variables.message,
-                    projectId: variables.projectId,
-                    createdAt: new Date()
+                queryClient.setQueryData<Message[]>(messagesQueryKey, (old) => {
+                    const optimisticMessage: Message = {
+                        id: Date.now(),
+                        role: 'USER',
+                        message: variables.message,
+                        projectId: variables.projectId,
+                        createdAt: new Date()
+                    }
+                    return old ? [...old, optimisticMessage] : [optimisticMessage]
+                })
+
+                return { previousMessages }
+            },
+            onError: (err, variables, context) => {
+                if (context?.previousMessages) {
+                    queryClient.setQueryData(messagesQueryKey, context.previousMessages)
                 }
-                return old ? [...old, optimisticMessage] : [optimisticMessage]
-            })
-
-            return { previousMessages }
-        },
-
-        onError: (err, variables, context) => {
-            if (context?.previousMessages) {
-                queryClient.setQueryData(messagesQueryKey, context.previousMessages)
-            }
-            console.error("Message failed to send:", err)
-        },
-
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: messagesQueryKey })
-            queryClient.invalidateQueries({ queryKey: projectQueryKey })
-        },
+                console.error("Message failed to send:", err)
+            },
+            onSettled: () => {
+                queryClient.invalidateQueries({ queryKey: messagesQueryKey })
+                queryClient.invalidateQueries({ queryKey: projectQueryKey })
+            },
+        }),
     })
 
     const handleSend = async (e: React.FormEvent) => {
