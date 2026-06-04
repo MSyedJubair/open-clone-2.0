@@ -5,7 +5,7 @@ import { Send } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTRPC } from "@/trpc/client"
 import { useState, useContext } from "react"
-import { Message } from "@/app/generated/prisma/client"
+import { Message, ProjectStatus } from "@/app/generated/prisma/client"
 import ProjectContext from "@/context/ProjectContext"
 import { toast } from "sonner"
 
@@ -60,6 +60,8 @@ const MessageInput = ({ projectId }: { projectId: number }) => {
         const messageToSend = message
         setMessage('')
 
+        const currentStatus = projectContext.status
+
         projectContext.setStatus('PROCESSING')
 
         try {
@@ -69,7 +71,8 @@ const MessageInput = ({ projectId }: { projectId: number }) => {
             })
         } catch {
             setMessage(messageToSend)
-            toast('Something Went Wrong')
+            toast('You do not have permission to modify this project. It belongs to someone else')
+            projectContext.setStatus(currentStatus as unknown as ProjectStatus)
         }
     }
 

@@ -2,6 +2,7 @@ import NewProject from '@/components/Shared/NewProject'
 import PromptInput from '@/components/Shared/PromptInput'
 import ProjectsView from '@/features/Projects/ProjectsView'
 import { auth } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 import { Zap } from 'lucide-react'
 import { headers } from "next/headers"
 import Link from 'next/link'
@@ -11,8 +12,13 @@ const page = async () => {
     headers: await headers()
   })
 
+  const user = await prisma.user.findFirst({
+    where: {
+      id: session?.user.id
+    }
+  })
+
   const isAuthenticated = Boolean(session)
-  const user = session?.user;
 
   return (
 
@@ -27,10 +33,14 @@ const page = async () => {
       <main className="w-full flex flex-col relative overflow-y-auto">
 
         <header className="flex items-center justify-between p-8 sticky top-0 z-10 border-b border-transparent">
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-5 py-2 text-sm font-medium text-zinc-300 backdrop-blur-md">
-            <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
-            <span>120,400 tokens remaining</span>
-          </div>
+          {
+            user && (
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-5 py-2 text-sm font-medium text-zinc-300 backdrop-blur-md">
+                <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
+                <span>{user?.token} tokens remaining</span>
+              </div>
+            )
+          }
           <div></div>
 
           <NewProject isAuthenticated={isAuthenticated} />
@@ -45,7 +55,7 @@ const page = async () => {
               </span>
             </h1>
 
-            <PromptInput isAuthenticated={isAuthenticated}/>
+            <PromptInput isAuthenticated={isAuthenticated} />
 
           </div>
 

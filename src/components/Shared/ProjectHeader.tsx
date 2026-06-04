@@ -152,7 +152,7 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
             </div>
           </DialogTrigger>
           <DialogContent>
-            This project is owner by {session?.user.name}. You don&apos;t have access to this project. You can only view this project
+            This project is owned by someone else. You don&apos;t have access to this project. You can only view this project
             <DialogClose asChild>
               <Button variant="outline">Okay.</Button>
             </DialogClose>
@@ -169,11 +169,15 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  await saveFiles({
-                    projectId: projectId,
-                    files: JSON.stringify(directoryContext.files),
-                  });
-                  toast('Project Saved.')
+                  try {
+                    await saveFiles({
+                      projectId: projectId,
+                      files: JSON.stringify(directoryContext.files),
+                    });
+                    toast('Project Saved.')
+                  } catch {
+                    toast('You do not have permission to modify this project. It belongs to someone else')
+                  }
                 }}
                 disabled={isSavingFiles}
                 className="flex items-center gap-2 h-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 bg-(--color-app-surface) border-zinc-800/80 hover:bg-zinc-800 hover:text-zinc-100 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
