@@ -8,7 +8,7 @@ import SideBarItems from "./SideBarItems";
 import SideBarHeader from "./SideBarHeader";
 
 export function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <TooltipProvider delayDuration={0}>

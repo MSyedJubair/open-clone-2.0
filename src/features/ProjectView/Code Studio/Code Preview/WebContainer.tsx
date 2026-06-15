@@ -46,7 +46,7 @@ export default function WebContainerPreview() {
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const webcontainerRef = useRef<WebContainer | null>(null);
   const structureSignatureRef = useRef<string>('');
-  
+
   const isBootingRef = useRef(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
 
@@ -55,7 +55,7 @@ export default function WebContainerPreview() {
   useEffect(() => {
     if (JSON.stringify(context.files) === '{}') return;
     if (webcontainerRef.current || isBootingRef.current) return;
-    
+
     isBootingRef.current = true;
 
     async function bootContainer() {
@@ -80,13 +80,21 @@ export default function WebContainerPreview() {
         const exitCode = await installProcess.exit;
         if (exitCode !== 0) throw new Error('Installation failed');
 
-        setStatus('Starting server...');
-        await instance.spawn('npm', ['run', 'dev']);
-
         instance.on('server-ready', (port, url) => {
           setStatus(`Live on port ${port}`);
           setIframeUrl(url);
         });
+
+        setStatus('Starting server...');
+        const viteProcess = await instance.spawn('npm', ['run', 'dev']);
+
+        viteProcess.output.pipeTo(
+          new WritableStream({
+            write(data) {
+              console.log("Vite Log Captured:", data);
+            }
+          })
+        );
 
         setIsContainerReady(true);
 
@@ -98,7 +106,7 @@ export default function WebContainerPreview() {
     }
 
     bootContainer();
-  }, [context.files]); 
+  }, [context.files]);
 
   useEffect(() => {
     if (!isContainerReady || !webcontainerRef.current) return;
