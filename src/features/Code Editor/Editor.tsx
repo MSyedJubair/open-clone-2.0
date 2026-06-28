@@ -33,7 +33,7 @@ export default function MonacoEditor() {
       </div>
 
       <div className="flex-1 bg-[#1e1e1e]">
-        {!currentCode ? (
+        {!currentFile ? (
           <div className="h-full flex items-center justify-center">
             <div className="flex flex-col items-center justify-center gap-3 text-center">
               <div className="p-4 rounded-full bg-muted">
