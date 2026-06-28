@@ -13,7 +13,7 @@ const ProjectView = ({ projectId }: { projectId: number }) => {
             </Allotment.Pane>
 
             <Allotment.Pane>
-                <CodeStudio projectId={projectId}/>
+                <CodeStudio/>
             </Allotment.Pane>
         </Allotment>
     )
