@@ -6,7 +6,7 @@ import { ArrowUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Spinner } from "../ui/spinner";
+import { Spinner } from "../../components/ui/spinner";
 
 const PromptInput = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
     const trpc = useTRPC();

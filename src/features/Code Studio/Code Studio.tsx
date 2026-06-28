@@ -2,8 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Code2, Eye } from "lucide-react"
-import CodeEditor from "./Code Editor/CodeEditor"
-import CodePreview from "./Code Preview/CodePreview"
+import CodeEditor from "../Code Editor/CodeEditor"
+import CodePreview from "../Code Preview/CodePreview"
 import { useTRPC } from "@/trpc/client"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useContext, useEffect } from "react"

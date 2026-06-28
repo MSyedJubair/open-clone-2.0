@@ -1,5 +1,5 @@
 import NewProject from '@/components/Shared/NewProject'
-import PromptInput from '@/components/Shared/PromptInput'
+import PromptInput from '@/features/Prompt Input/PromptInput'
 import ProjectsView from '@/features/Projects/ProjectsView'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'

@@ -3,13 +3,10 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { FileSystemTree as WCFileTree, WebContainer } from '@webcontainer/api';
 import DirectoryContext from '@/context/DirectoryContext';
-import { FileSystemTree } from '@/lib/types';
 
-function getFileNode(tree: FileSystemTree, path: string) {
+function getFileNode(tree: any, path: string) {
   const parts = path.split('/');
-  let current: FileSystemTree | undefined = tree;
-
-  if (!parts) return null;
+  let current = tree;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -26,36 +23,21 @@ function getFileNode(tree: FileSystemTree, path: string) {
   return null;
 }
 
-type TreeSignature = Array<
-  [name: string, children: TreeSignature | null]
->;
-
-function getTreeStructureSignature(tree: FileSystemTree) {
-  const serialize = (node: FileSystemTree): TreeSignature =>
-    Object.entries(node)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) =>
-        value.directory ? [key, serialize(value.directory)] : [key, null]
-      );
-
-  return JSON.stringify(serialize(tree));
-}
-
 export default function WebContainerPreview() {
   const [status, setStatus] = useState('Idle');
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   const webcontainerRef = useRef<WebContainer | null>(null);
-  const structureSignatureRef = useRef<string>('');
-
+  
   const isBootingRef = useRef(false);
   const [isContainerReady, setIsContainerReady] = useState(false);
 
   const context = useContext(DirectoryContext);
 
+  // Effect 1: Booting up the WebContainer environment
   useEffect(() => {
-    if (JSON.stringify(context.files) === '{}') return;
+    if (!context.files || Object.keys(context.files).length === 0) return;
     if (webcontainerRef.current || isBootingRef.current) return;
-
+    
     isBootingRef.current = true;
 
     async function bootContainer() {
@@ -66,70 +48,61 @@ export default function WebContainerPreview() {
 
         setStatus('Writing initial files...');
         await instance.mount(context.files as unknown as WCFileTree);
-        structureSignatureRef.current = getTreeStructureSignature(context.files);
 
-        setStatus('Installing dependencies...');
+        setStatus('Installing dependencies (this may take a moment)...');
         const installProcess = await instance.spawn('npm', ['install']);
 
         installProcess.output.pipeTo(
           new WritableStream({
-            write(data) { console.log(data) },
+            write(data) { console.log(data); },
           })
         );
 
         const exitCode = await installProcess.exit;
         if (exitCode !== 0) throw new Error('Installation failed');
 
+        setStatus('Starting Next.js server...');
+        // Using --port 3000 explicitly can help keep port tracking stable
+        await instance.spawn('npm', ['run', 'dev', '--', '-p', '3000']);
+
         instance.on('server-ready', (port, url) => {
           setStatus(`Live on port ${port}`);
           setIframeUrl(url);
         });
 
-        setStatus('Starting server...');
-        const viteProcess = await instance.spawn('npm', ['run', 'dev']);
-
-        viteProcess.output.pipeTo(
-          new WritableStream({
-            write(data) {
-              console.log("Vite Log Captured:", data);
-            }
-          })
-        );
-
         setIsContainerReady(true);
 
       } catch (error) {
-        console.error(error);
-        setStatus('Failed to load container.');
+        console.error('WebContainer boot error:', error);
+        setStatus('Failed to load container. Check console for details.');
         isBootingRef.current = false;
       }
     }
 
     bootContainer();
-  }, [context.files]);
+  }, [context.files]); 
 
+  // Effect 2: Incremental File Synchronization
   useEffect(() => {
-    if (!isContainerReady || !webcontainerRef.current) return;
-    if (JSON.stringify(context.files) === '{}') return;
+    if (!isContainerReady || !webcontainerRef.current || !context.filePath) return;
 
     const syncFiles = async () => {
       try {
         const wc = webcontainerRef.current!;
-        const nextSignature = getTreeStructureSignature(context.files);
-
-        if (structureSignatureRef.current !== '' && nextSignature !== structureSignatureRef.current) {
-          setStatus('Syncing project file tree...');
-          await wc.mount(context.files as unknown as WCFileTree);
-          structureSignatureRef.current = nextSignature;
-          return;
-        }
-
-        structureSignatureRef.current = nextSignature;
-
         const updatedNode = getFileNode(context.files, context.filePath);
         const updatedCode = updatedNode?.file?.contents || '';
 
+        // Handle path parts to ensure directory paths exist before writing file
+        const pathParts = context.filePath.split('/');
+        if (pathParts.length > 1) {
+          const dirPath = pathParts.slice(0, -1).join('/');
+          // Generates folders recursively if they don't exist yet
+          await wc.fs.mkdir(dirPath, { recursive: true });
+        }
+
+        // Incrementally update only the specific file
         await wc.fs.writeFile(context.filePath, updatedCode);
+        console.log(`Synced: ${context.filePath}`);
       } catch (error) {
         console.error('Failed to update file inside WebContainer:', error);
       }
@@ -139,9 +112,17 @@ export default function WebContainerPreview() {
   }, [context.files, context.filePath, isContainerReady]);
 
   return (
-    <div className='w-full h-full'>
-      <h1>{status}</h1>
-      <iframe src={iframeUrl || undefined} className='h-full w-full'></iframe>
+    <div className='w-full h-full flex flex-col'>
+      <div className='p-2 bg-gray-800 text-white text-sm font-mono'>{status}</div>
+      <div className='flex-1 border border-gray-300 rounded'>
+        {iframeUrl ? (
+          <iframe src={iframeUrl} className='h-full w-full' allow="cross-origin-isolated"></iframe>
+        ) : (
+          <div className='h-full w-full flex items-center justify-center bg-gray-50 text-gray-400'>
+            Waiting for server...
+          </div>
+        )}
+      </div>
     </div>
-  )
+  );
 }

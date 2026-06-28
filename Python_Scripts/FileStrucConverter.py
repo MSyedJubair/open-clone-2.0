@@ -51,8 +51,8 @@ def generate_webcontainer_files(target_folder: str, output_json_path: str):
 # --- Example Usage ---
 if __name__ == "__main__":
     # Replace with your actual project folder path
-    folder_to_convert = "C:/Users/user/Desktop/openclonev2/Python_Scripts/Tanstack_Start"
+    folder_to_convert = "/home/tonmoy/Projects/open-clone-2.0/Python_Scripts/react"
     # The output JSON filename
-    output_filename = "C:/Users/user/Desktop/openclonev2/Python_Scripts/files.json"
+    output_filename = "/home/tonmoy/Projects/open-clone-2.0/Python_Scripts/files.json"
 
     generate_webcontainer_files(folder_to_convert, output_filename)
