@@ -4,24 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Code2, Eye } from "lucide-react"
 import CodeEditor from "../Code Editor/CodeEditor"
 import CodePreview from "../Code Preview/CodePreview"
-import { useTRPC } from "@/trpc/client"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { useContext, useEffect } from "react"
-import DirectoryContext from "@/context/DirectoryContext"
 
 const CodeStudio = ({ projectId }: { projectId: number }) => {
-  const trpc = useTRPC()
-  const { data: project } = useSuspenseQuery(
-    trpc.project.getProject.queryOptions({ projectId: projectId })
-  )
-
-  const context = useContext(DirectoryContext)
-
-  useEffect(() => {
-    if (project?.files) {
-      context.setFiles(JSON.parse(project.files));
-    }
-  }, [project?.files])
 
   return (
     <div className="w-full h-full mx-auto border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50/50 dark:bg-zinc-950 shadow-sm">

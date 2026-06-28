@@ -10,3 +10,7 @@ export interface TreeNode {
 export interface FileSystemTree {
   [nodeName: string]: TreeNode;
 }
+
+export interface FileTree {
+  [nodeName: string]: string
+}

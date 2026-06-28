@@ -1,4 +1,4 @@
-import NewProject from '@/components/Shared/NewProject'
+import NewProject from '@/features/Create Project/NewProject'
 import PromptInput from '@/features/Prompt Input/PromptInput'
 import ProjectsView from '@/features/Projects/ProjectsView'
 import { auth } from '@/lib/auth'

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { FolderGit2, Settings, User as UserIcon, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import NewProject from "@/components/Shared/NewProject";
+import NewProject from "@/features/Create Project/NewProject";
 
 const ProjectMe = async () => {
   const session = await auth.api.getSession({

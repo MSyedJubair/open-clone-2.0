@@ -1,14 +1,14 @@
 'use client'
 
-import { FileSystemTree } from "@/lib/types";
+import { FileTree } from "@/lib/types";
 import { createContext } from "react";
 
 type DirectoryContextType = {
     filePath: string
     setFilePath: React.Dispatch<React.SetStateAction<string>>
-    files: FileSystemTree
+    files: FileTree
     setFiles: React.Dispatch<
-        React.SetStateAction<FileSystemTree>
+        React.SetStateAction<FileTree>
     >
 }
 const DirectoryContext = createContext<DirectoryContextType>({

@@ -9,7 +9,7 @@ import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
 import { useContext, useEffect } from "react"
 import DirectoryContext from "@/context/DirectoryContext"
-import { Spinner } from "../ui/spinner"
+import { Spinner } from "../../components/ui/spinner"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import ProjectContext from "@/context/ProjectContext"
 import { default as Pusher } from "pusher-js"
+import { useInitializeDirectoryContext } from "@/hooks/initialize-directory-context"
 
 const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAuthorized: boolean }) => {
   const trpc = useTRPC()
@@ -29,6 +30,8 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
   const { data: project, isLoading: isProjectLoading } = useSuspenseQuery(
     trpc.project.getProject.queryOptions({ projectId: projectId })
   )
+
+  useInitializeDirectoryContext(projectId)
 
   const directoryContext = useContext(DirectoryContext);
   const projectContext = useContext(ProjectContext)

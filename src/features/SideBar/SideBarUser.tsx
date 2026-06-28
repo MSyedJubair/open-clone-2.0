@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Skeleton } from "../../ui/skeleton";
+import { Skeleton } from "../../components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const SideBarUser = ({ isCollapsed }: { isCollapsed: boolean }) => {

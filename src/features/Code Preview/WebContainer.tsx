@@ -3,6 +3,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { FileSystemTree as WCFileTree, WebContainer } from '@webcontainer/api';
 import DirectoryContext from '@/context/DirectoryContext';
+import { convertToWebContainerFormat } from '@/lib/utils';
 
 function getFileNode(tree: any, path: string) {
   const parts = path.split('/');
@@ -32,10 +33,11 @@ export default function WebContainerPreview() {
   const [isContainerReady, setIsContainerReady] = useState(false);
 
   const context = useContext(DirectoryContext);
+  const files = convertToWebContainerFormat(context.files)
 
   // Effect 1: Booting up the WebContainer environment
   useEffect(() => {
-    if (!context.files || Object.keys(context.files).length === 0) return;
+    if (!files || Object.keys(files).length === 0) return;
     if (webcontainerRef.current || isBootingRef.current) return;
     
     isBootingRef.current = true;
@@ -47,7 +49,7 @@ export default function WebContainerPreview() {
         webcontainerRef.current = instance;
 
         setStatus('Writing initial files...');
-        await instance.mount(context.files as unknown as WCFileTree);
+        await instance.mount(files as unknown as WCFileTree);
 
         setStatus('Installing dependencies (this may take a moment)...');
         const installProcess = await instance.spawn('npm', ['install']);
@@ -63,7 +65,13 @@ export default function WebContainerPreview() {
 
         setStatus('Starting Next.js server...');
         // Using --port 3000 explicitly can help keep port tracking stable
-        await instance.spawn('npm', ['run', 'dev', '--', '-p', '3000']);
+        const devProcess = await instance.spawn('npm', ['run', 'dev']);
+
+        devProcess.output.pipeTo(
+          new WritableStream({
+            write(data) { console.log(data); },
+          })
+        );
 
         instance.on('server-ready', (port, url) => {
           setStatus(`Live on port ${port}`);
@@ -80,7 +88,7 @@ export default function WebContainerPreview() {
     }
 
     bootContainer();
-  }, [context.files]); 
+  }, [files]); 
 
   // Effect 2: Incremental File Synchronization
   useEffect(() => {
@@ -89,7 +97,7 @@ export default function WebContainerPreview() {
     const syncFiles = async () => {
       try {
         const wc = webcontainerRef.current!;
-        const updatedNode = getFileNode(context.files, context.filePath);
+        const updatedNode = getFileNode(files, context.filePath);
         const updatedCode = updatedNode?.file?.contents || '';
 
         // Handle path parts to ensure directory paths exist before writing file
@@ -109,7 +117,7 @@ export default function WebContainerPreview() {
     };
 
     syncFiles();
-  }, [context.files, context.filePath, isContainerReady]);
+  }, [files, context.filePath, isContainerReady]);
 
   return (
     <div className='w-full h-full flex flex-col'>

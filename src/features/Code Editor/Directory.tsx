@@ -7,11 +7,13 @@ import File from "./File"
 import Folder from "./Folder"
 import { useContext } from "react"
 import DirectoryContext from "@/context/DirectoryContext"
+import { convertToWebContainerFormat } from "@/lib/utils"
 
 const Directory = () => {
   const context = useContext(DirectoryContext)
-  
-  const sortedEntries = Object.entries(context.files).sort(([nameA, dataA], [nameB, dataB]) => {
+  const files = convertToWebContainerFormat(context.files)
+
+  const sortedEntries = Object.entries(files).sort(([nameA, dataA], [nameB, dataB]) => {
     const isFolderA = dataA && 'directory' in dataA
     const isFolderB = dataB && 'directory' in dataB
 
@@ -31,7 +33,7 @@ const Directory = () => {
           <span>Explorer</span>
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="p-2 flex-1 min-h-0">
         <ScrollArea className="h-full w-full pr-2">
           <ul className="space-y-1">

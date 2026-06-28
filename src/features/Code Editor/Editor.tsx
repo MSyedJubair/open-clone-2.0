@@ -5,44 +5,12 @@ import Editor from "@monaco-editor/react";
 import { useContext } from "react";
 import { FileCode2, FileText } from "lucide-react";
 import { getLanguageFromFileName } from "@/lib/utils";
-import { FileSystemTree } from "@/lib/types";
-
-function getFileNode(tree: FileSystemTree, path: string) {
-  const parts = path.split('/');
-
-  let current: FileSystemTree | undefined = tree;
-
-  if (!parts) {
-    return null
-  }
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-
-    // Last part = file
-    const isLast = i === parts.length - 1;
-
-    if (isLast) {
-      return current[part];
-    }
-
-    // Move into directory
-    current = current[part]?.directory;
-
-    if (!current) {
-      return null;
-    }
-  }
-
-  return null;
-}
 
 export default function MonacoEditor() {
   const context = useContext(DirectoryContext);
 
   const currentFile = context?.filePath || "";
-  const currentNode = getFileNode(context.files, currentFile)
-  const currentCode = currentNode?.file?.contents || ""
+  const currentCode = context.files[currentFile] || ""
 
   const fileName = currentFile.split("/").pop();
   const language = getLanguageFromFileName(fileName || "");
@@ -90,23 +58,18 @@ export default function MonacoEditor() {
             value={currentCode}
             theme="vs-dark"
             onChange={(value) => {
-              context.setFiles((prev) => {
-                const newTree = structuredClone(prev);
+              if (!currentFile) return;
 
-                const node = getFileNode(newTree, context.filePath);
-
-                if (node?.file) {
-                  node.file.contents = value || "";
-                }
-
-                return newTree;
-              });
+              context.setFiles((prev) => ({
+                ...prev,
+                [currentFile]: value || "", 
+              }));
             }}
             options={{
               minimap: { enabled: false },
               fontSize: 14,
               padding: {
-              top: 16,
+                top: 16,
               },
               smoothScrolling: true,
               cursorBlinking: "smooth",

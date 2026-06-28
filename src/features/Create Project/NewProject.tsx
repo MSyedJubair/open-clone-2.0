@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useTRPC } from '@/trpc/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Spinner } from '../ui/spinner'
+import { Spinner } from '../../components/ui/spinner'
 import { Loader2, LogIn, Plus } from 'lucide-react'
 
 const NewProject = ({ isAuthenticated }: { isAuthenticated: boolean }) => {
