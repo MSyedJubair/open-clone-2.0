@@ -32,8 +32,8 @@ export function timeAgo(timestamp: string | number | Date) {
   return Math.floor(seconds) + " seconds ago";
 }
 
-export function convertToWebContainerFormat(flatFiles): FileSystemTree {
-  const tree = {};
+export function convertToWebContainerFormat(flatFiles: Record<string, string>): FileSystemTree {
+  const tree: FileSystemTree = {};
 
   for (const [filePath, contents] of Object.entries(flatFiles)) {
     // Split the path and remove any empty strings (e.g., from leading slashes)
@@ -59,7 +59,7 @@ export function convertToWebContainerFormat(flatFiles): FileSystemTree {
           };
         }
         // Move down a level into the directory
-        currentLevel = currentLevel[part].directory;
+        currentLevel = currentLevel[part].directory ?? {};
       }
     }
   }
@@ -142,3 +142,18 @@ export const getLanguageFromFileName = (fileName: string) => {
       return "plaintext";
   }
 };
+
+export const getStatusStyles = (status?: string) => {
+  if (!status) return { text: "text-zinc-500", dot: "bg-zinc-500" }
+
+  switch (status) {
+    case "COMPLETED":
+      return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
+    case "LIVE":
+      return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
+    case "DRAFT":
+      return { text: "text-[var(--color-status-draft)]", dot: "bg-[var(--color-status-draft)]" }
+    default:
+      return { text: "text-[var(--color-status-token)]", dot: "bg-[var(--color-status-token)]" }
+  }
+}

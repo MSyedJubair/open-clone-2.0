@@ -2,12 +2,12 @@
 
 import { ChevronRight, Clock, SaveAll, Lock } from "lucide-react"
 import Image from "next/image"
-import { timeAgo } from "@/lib/utils"
+import { getStatusStyles, timeAgo } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
-import { useContext, useEffect } from "react"
+import { useContext } from "react"
 import DirectoryContext from "@/context/DirectoryContext"
 import { Spinner } from "../../components/ui/spinner"
 import { toast } from "sonner"
@@ -20,18 +20,20 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import ProjectContext from "@/context/ProjectContext"
-import { default as Pusher } from "pusher-js"
 import { useInitializeDirectoryContext } from "@/hooks/initialize-directory-context"
+import { useInitiatePusher } from "@/hooks/use-initiate-pusher"
+import { useInitializeProjectContext } from "@/hooks/initialize-project-context"
 
 const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAuthorized: boolean }) => {
   const trpc = useTRPC()
-  const queryclient = useQueryClient()
 
   const { data: project, isLoading: isProjectLoading } = useSuspenseQuery(
     trpc.project.getProject.queryOptions({ projectId: projectId })
   )
 
   useInitializeDirectoryContext(projectId)
+  useInitiatePusher(projectId)
+  useInitializeProjectContext(projectId)
 
   const directoryContext = useContext(DirectoryContext);
   const projectContext = useContext(ProjectContext)
@@ -39,65 +41,7 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
   const { data: session, isPending: isUserLoading } = authClient.useSession()
   const { mutateAsync: saveFiles, isPending: isSavingFiles } = useMutation(trpc.project.saveProjectFile.mutationOptions())
 
-  const projectQueryKey = trpc.project.getProject.queryKey({ projectId: projectId })
-  const messageQueryKey = trpc.message.getMessages.queryKey({ projectId: projectId })
-
-  const getStatusStyles = (status?: string) => {
-    if (!status) return { text: "text-zinc-500", dot: "bg-zinc-500" }
-
-    switch (status) {
-      case "COMPLETED":
-        return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
-      case "LIVE":
-        return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
-      case "DRAFT":
-        return { text: "text-[var(--color-status-draft)]", dot: "bg-[var(--color-status-draft)]" }
-      default:
-        return { text: "text-[var(--color-status-token)]", dot: "bg-[var(--color-status-token)]" }
-    }
-  }
-
   const statusStyle = getStatusStyles(projectContext.status)
-
-  useEffect(() => {
-    projectContext.setStatus(project?.status || 'DRAFT')
-  }, [project?.status])
-
-  useEffect(() => {
-    const pusher = new Pusher(
-      process.env.NEXT_PUBLIC_PUSHER_KEY!,
-      {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-      }
-    )
-
-    const channel = pusher.subscribe(projectId.toString());
-    console.log('Done Subscribe')
-
-    type data = { text: string, timeStamp: number, status: string }
-
-    channel.bind('build-status', (data: data) => {
-      console.log(data)
-      if (data.status === 'generating') {
-        toast('Building the project. You can close your browser or do something else.')
-
-      } else if (data.status === 'completed') {
-        toast('Generation completed. Updating your project...')
-        queryclient.invalidateQueries({ queryKey: projectQueryKey })
-        queryclient.invalidateQueries({ queryKey: messageQueryKey })
-
-      } else if (data.status === 'failed') {
-        toast('Generation failed. Please try again later.')
-        queryclient.invalidateQueries({ queryKey: projectQueryKey })
-        queryclient.invalidateQueries({ queryKey: messageQueryKey })
-      }
-    });
-
-    return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(projectId.toString());
-    };
-  }, [projectId])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/50 bg-app-bg/80 backdrop-blur-xl">
@@ -191,7 +135,7 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
                   <SaveAll className="w-3.5 h-3.5 text-zinc-400 transition-transform" />
                 )}
                 <span>
-                  {isSavingFiles ? 'Saving' : 'Save'}
+                  {isSavingFiles && 'Saving'}
                 </span>
               </Button>
             </div>
@@ -215,12 +159,6 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="text-right hidden md:block">
-                <p className="text-xs font-semibold text-zinc-200 leading-none">
-                  {session?.user.name || "Anonymous"}
-                </p>
-              </div>
-
               <button className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-(--color-brand-indigo)/30 bg-(--color-brand-indigo)/10 shadow-sm transition-all hover:border-(--color-brand-purple)/50 active:scale-95 overflow-hidden group">
                 {session?.user.image ? (
                   <Image
