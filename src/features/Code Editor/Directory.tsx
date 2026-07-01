@@ -40,11 +40,11 @@ const Directory = () => {
   }
 
   return (
-    <Card className="w-full max-w-xs border-border bg-card shadow-sm rounded-lg overflow-hidden h-full mb-7 flex flex-col">
-      <CardHeader className="py-3 px-4 border-b border-border/60 bg-muted/10 shrink-0">
+    <Card className="flex h-full w-full flex-col overflow-hidden rounded-2xl project-card project-border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <CardHeader className="shrink-0 border-b project-border project-panel-muted px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-xs font-semibold tracking-wider uppercase flex items-center gap-2 text-muted-foreground select-none">
-            <FolderTree className="h-4 w-4 text-primary/80" />
+          <CardTitle className="flex select-none items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] project-text-muted">
+            <FolderTree className="h-4 w-4 text-indigo-400" />
             <span>Explorer</span>
           </CardTitle>
 
@@ -56,7 +56,7 @@ const Directory = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="p-2 flex-1 min-h-0">
+      <CardContent className="flex-1 min-h-0 p-2">
         <ScrollArea className="h-full w-full pr-2">
           <ul className="space-y-1">
             {sortedEntries.map(([name, data]) => {
