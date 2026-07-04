@@ -127,7 +127,7 @@ const ProjectHeader = ({ projectId, isAuthorized }: { projectId: number, isAutho
                   }
                 }}
                 disabled={isSavingFiles}
-                className="flex items-center gap-2 h-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 bg-(--color-app-surface) border-zinc-800/80 hover:bg-zinc-800 hover:text-zinc-100 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center justify-center h-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 bg-(--color-app-surface) border-zinc-800/80 hover:bg-zinc-800 hover:text-zinc-100 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
               >
                 {isSavingFiles ? (
                   <Spinner className="w-3.5 h-3.5 text-zinc-400 transition-transform" />

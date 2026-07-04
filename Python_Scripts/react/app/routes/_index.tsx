@@ -1,12 +1,4 @@
-import type { Route } from "./+types/home";
 import { motion } from "framer-motion";
-
-export function meta({ }: Route.MetaArgs) {
-  return [
-    { title: "OpenClone | AI Web Builder" },
-    { name: "description", content: "Build production-ready web apps in seconds with OpenClone AI." },
-  ];
-}
 
 export default function Home() {
   return (

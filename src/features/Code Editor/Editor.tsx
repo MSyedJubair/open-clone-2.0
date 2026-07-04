@@ -5,6 +5,7 @@ import Editor from "@monaco-editor/react";
 import { useContext } from "react";
 import { FileCode2, FileText } from "lucide-react";
 import { getLanguageFromFileName } from "@/lib/utils";
+import { loader } from "@monaco-editor/react";
 
 export default function MonacoEditor() {
   const context = useContext(DirectoryContext);
@@ -14,6 +15,18 @@ export default function MonacoEditor() {
 
   const fileName = currentFile.split("/").pop();
   const language = getLanguageFromFileName(fileName || "");
+
+  loader.init().then((monaco) => {
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      moduleResolution:
+        monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      allowNonTsExtensions: true,
+      allowJs: true,
+    });
+  });
 
   return (
     <div className="h-full w-full rounded-xl border bg-background overflow-hidden flex flex-col">
@@ -62,7 +75,7 @@ export default function MonacoEditor() {
 
               context.setFiles((prev) => ({
                 ...prev,
-                [currentFile]: value || "", 
+                [currentFile]: value || "",
               }));
             }}
             options={{

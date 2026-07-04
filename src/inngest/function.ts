@@ -9,7 +9,11 @@ import { FileTree } from "@/lib/types";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const CodeBuildSystemPrompt = `
-You are a Senior React Router Developer. Your task is to build a website based on the user instruction. The project is pre-configured with all shadcnUI components, Tailwind CSS v4, GSAP, and Motion. You just have to return the updated pages.
+You are a Senior React Router Developer. Your task is to build a website based on the user instruction. The project is pre-configured with all shadcnUI components, Tailwind CSS v4, GSAP, File-System Routing using fs-routes and Motion. You just have to return the updated pages. 
+
+Make sure the website is modern looking with interactive animations using motion. Stunning scroll based animations using gsap. The overall structure should be clean and responsive.
+
+Use demo data for database related projects.
 
 CRITICAL: Do NOT output JSON. You must use the following XML-like tagging structure to output your response. 
 
@@ -27,8 +31,28 @@ Output format:
 </project>
 `
 
-const EditCodeSystemPrompt = process.env.CODE_EDIT_SYSTEM_PROMPT as string
+const EditCodeSystemPrompt = `
+You are a Senior React Router Developer. Your task is to edit a website based on the user instruction. The project is pre-configured with all shadcnUI components, Tailwind CSS v4, GSAP, File-System Routing using fs-routes and Motion. Don't use any other tech stack other that those. 
 
+You're given the 'app/routes' directory files. You just have to return the updated pages. 
+
+Use demo data for database related projects.
+
+CRITICAL: Do NOT output JSON. You must use the following XML-like tagging structure to output your response. 
+
+Provide the project metadata in a <project> tag, and wrap every file inside a <file> tag with a "path" attribute. 
+
+Output format:
+<project name="Your Project Name" description="A short summary of the task done">
+  <file path="app/routes/home.tsx">
+    import { useState } from 'react';
+    // ... raw, unescaped code goes here
+  </file>
+  <file path="components/ui/custom-button.tsx">
+    // ... raw, unescaped code goes here
+  </file>
+</project>
+`
 interface AiResponse {
   name: string,
   description: string,
@@ -81,6 +105,10 @@ export const buildCode = inngest.createFunction(
   {
     id: "buildCode",
     triggers: { event: "buildCode" },
+    rateLimit: {
+      limit: 2,
+      period: "1m",
+    },
     retries: 1,
     onFailure: async ({ event, error }) => {
       const originalEvent = event.data.event;
@@ -117,15 +145,20 @@ export const buildCode = inngest.createFunction(
       timestamp: Date.now(),
     })
 
+    let tokenCount: number | undefined = 0
+
     const response = await step.run('generating response', async () => {
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite",
         systemInstruction: CodeBuildSystemPrompt,
       });
 
       const response = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: userReq }] }]
       });
+
+      const resTokenCount = response.response.usageMetadata?.totalTokenCount
+      tokenCount = resTokenCount
 
       return response.response.text()
     })
@@ -160,7 +193,7 @@ export const buildCode = inngest.createFunction(
     await step.run("update-db-project", async () => {
       if (!result) return
 
-      return await prisma.project.update({
+      const project = await prisma.project.update({
         where: { id: Number(projectId) },
         data: {
           name: result.name,
@@ -169,6 +202,19 @@ export const buildCode = inngest.createFunction(
           status: 'COMPLETED',
         },
       });
+
+      await prisma.user.update({
+        where: {
+          id: project.authorId
+        },
+        data: {
+          token: {
+            decrement: tokenCount
+          }
+        }
+      })
+
+      return project
     });
 
     await step.run("create-chat-message", async () => {
@@ -232,6 +278,7 @@ export const editCode = inngest.createFunction(
 
   async ({ event, step }) => {
     const { userReq, projectId } = event.data;
+    let tokenCount: number | undefined = 0
 
     await pusherServer.trigger(projectId.toString(), 'build-status', {
       text: 'Generation started.',
@@ -256,9 +303,14 @@ export const editCode = inngest.createFunction(
 
     const existingFiles = JSON.parse(project.files as string);
 
+    const routeDir = Object.entries(existingFiles).filter(([path]) => {
+      const parts = path.split("/");
+      return parts[0] === "app" && parts[parts.length - 1].startsWith("route.");
+    });
+
     const response = await step.run('generating response', async () => {
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite",
         systemInstruction: EditCodeSystemPrompt,
       });
 
@@ -269,8 +321,8 @@ export const editCode = inngest.createFunction(
             parts: [
               {
                 text: `
-                    Current Project:
-                    ${JSON.stringify(existingFiles)}
+                    Current 'app/route' files:
+                    ${JSON.stringify(routeDir)}
 
                     User Request:
                     ${userReq}
@@ -281,31 +333,69 @@ export const editCode = inngest.createFunction(
         ],
       });
 
-      return JSON.parse(result.response.text())
+      const resTokenCount = result.response.usageMetadata?.totalTokenCount
+      tokenCount = resTokenCount
+
+      return result.response.text()
     })
 
-    const mergedFiles = mergeAiFiles(
-      existingFiles,
-      response.updatedFiles
-    );
+    const result = await step.run('parsing response', async () => {
+      if (!response) {
+        console.log("No response candidates returned");
+        return;
+      }
 
-    await prisma.project.update({
-      where: {
-        id: Number(projectId),
-      },
-      data: {
-        files: JSON.stringify(mergedFiles),
-        status: 'COMPLETED'
-      },
-    });
+      return parseAiResponse(response)
+    })
 
-    await prisma.message.create({
-      data: {
-        message: response.summary,
-        role: "AI",
-        projectId,
-      },
-    });
+    const mergedResult = await step.run('merge response', async () => {
+      if (!result) {
+        return
+      }
+
+      const project = await prisma.project.findFirst({
+        where: {
+          id: Number(projectId)
+        }
+      })
+
+      const currentFiles = JSON.parse(project?.files || '')
+
+      const mergedFiles = mergeAiFiles(currentFiles, result.files)
+
+      return mergedFiles
+    })
+
+    await step.run('updating-db', async () => {
+      await prisma.project.update({
+        where: {
+          id: Number(projectId),
+        },
+        data: {
+          files: JSON.stringify(mergedResult),
+          status: 'COMPLETED'
+        },
+      });
+
+      await prisma.user.update({
+        where: {
+          id: project.authorId
+        },
+        data: {
+          token: {
+            decrement: tokenCount
+          }
+        }
+      })
+
+      await prisma.message.create({
+        data: {
+          message: result?.description || '',
+          role: "AI",
+          projectId,
+        },
+      });
+    })
 
     await pusherServer.trigger(
       projectId.toString(),
