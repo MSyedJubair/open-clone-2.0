@@ -44,4 +44,6 @@ next-env.d.ts
 
 /app/generated/prisma
 
+# Other
 test.js
+Python_Scripts/
