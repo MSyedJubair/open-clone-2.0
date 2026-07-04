@@ -1,7 +1,7 @@
 "use client"
 
-import ProjectChat from './ProjectChat/ProjectChatView'
-import CodeStudio from './Code Studio/Code Studio'
+import ProjectChat from '../ProjectChat/ProjectChatView'
+import CodeStudio from '../Code Studio/Code Studio'
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 
@@ -13,7 +13,7 @@ const ProjectView = ({ projectId }: { projectId: number }) => {
             </Allotment.Pane>
 
             <Allotment.Pane>
-                <CodeStudio projectId={projectId}/>
+                <CodeStudio/>
             </Allotment.Pane>
         </Allotment>
     )

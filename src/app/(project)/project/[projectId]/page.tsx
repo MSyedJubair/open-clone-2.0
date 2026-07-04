@@ -1,4 +1,4 @@
-import ProjectHeader from "@/components/Shared/ProjectHeader";
+import ProjectHeader from "@/features/ProjectView/ProjectHeader";
 import { caller, HydrateClient, prefetch, trpc } from "@/trpc/server";
 import ProjectView from "@/features/ProjectView/ProjectView";
 import { auth } from "@/lib/auth";

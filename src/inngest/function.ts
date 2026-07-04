@@ -4,370 +4,407 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { inngest } from "./client";
 import prisma from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher-server";
-import { FileSystemTree, TreeNode } from "@/lib/types";
+import { FileTree } from "@/lib/types";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const CodeBuildSystemPrompt = `
-You are an expert React developer. 
-Generate a complete, working project structure for a WebContainer using React, Vite, and Tailwind CSS. 
-Make sure the design is modern and responsive across all devices.
+You are a Senior React Router Developer. Your task is to build a website based on the user instruction. The project is pre-configured with all shadcnUI components, Tailwind CSS v4, GSAP, File-System Routing using fs-routes and Motion. You just have to return the updated pages. 
 
-IMPORTANT: Return ONLY a valid JSON object. 
-Do not include explanations, markdown formatting (like ` + "```json), or any text outside the JSON block. " + 
+Make sure the website is modern looking with interactive animations using motion. Stunning scroll based animations using gsap. The overall structure should be clean and responsive.
+
+Use demo data for database related projects.
+
+CRITICAL: Do NOT output JSON. You must use the following XML-like tagging structure to output your response. 
+
+Provide the project metadata in a <project> tag, and wrap every file inside a <file> tag with a "path" attribute. 
+
+Output format:
+<project name="Your Project Name" description="A short description of the project">
+  <file path="app/routes/home.tsx">
+    import { useState } from 'react';
+    // ... raw, unescaped code goes here
+  </file>
+  <file path="components/ui/custom-button.tsx">
+    // ... raw, unescaped code goes here
+  </file>
+</project>
 `
-Return ONLY a JSON object with:
-1. "name": A meaningful, 2-3 words project name
-2. "description": A descriptive summary of the project
-3. "files": A WebContainer-compatible FileSystemTree object.
-
-Rules:
-- Use React and Vite.
-- Use Tailwind CSS for all styling.
-- Use framer-motion for animations.
-- Use lucide-react for icons.
-- Ensure all JSON string values are properly escaped.
-
-You MUST include the following files in the structure to ensure the app compiles and previews correctly:
-- package.json (must include "dev": "vite" script and all dependencies)
-- vite.config.js
-- tailwind.config.js
-- postcss.config.js
-- index.html (must include a div with id="root" and script tag pointing to /src/main.jsx)
-- src/index.css (must include @tailwind base, components, and utilities)
-- src/main.jsx (must render App.jsx into the root element)
-- src/App.jsx (the main application component)
-
-Structure Template:
-{
-  "name": "string",
-  "description": "string",
-  "files": {
-    "package.json": { "file": { "contents": "..." } },
-    "vite.config.js": { "file": { "contents": "..." } },
-    "tailwind.config.js": { "file": { "contents": "..." } },
-    "postcss.config.js": { "file": { "contents": "..." } },
-    "index.html": { "file": { "contents": "..." } },
-    "src": {
-      "directory": {
-        "index.css": { "file": { "contents": "..." } },
-        "main.jsx": { "file": { "contents": "..." } },
-        "App.jsx": { "file": { "contents": "..." } },
-        "components": {
-          "directory": {
-            "Header.jsx": { "file": { "contents": "..." } }
-          }
-        }
-      }
-    }
-  }
-}
-`;
 
 const EditCodeSystemPrompt = `
-You are an expert React developer specializing in refactoring and updating code.
+You are a Senior React Router Developer. Your task is to edit a website based on the user instruction. The project is pre-configured with all shadcnUI components, Tailwind CSS v4, GSAP, File-System Routing using fs-routes and Motion. Don't use any other tech stack other that those. 
 
-You will receive:
-1. The current project file tree structure.
-2. A user request detailing modifications, bug fixes, or new features.
+You're given the 'app/routes' directory files. You just have to return the updated pages. 
 
-Your task is to modify ONLY the files necessary to fulfill the request.
+Use demo data for database related projects.
 
-IMPORTANT: Return ONLY a valid JSON object. 
-Do not include explanations, markdown formatting (like `+ "```json), or any text outside the JSON block. " +
-`Rules for Code Editing:
-- Return ONLY the files that need to be changed, added, or deleted.
-- DO NOT use placeholders like "// ... rest of the code" or "/* existing code stays here */". You MUST output the entire, full content of the modified file.
-- Maintain the exact technical stack: React, Vite, Tailwind CSS, framer-motion, and lucide-react.
-- If the user requests a new file, create it in the appropriate directory using the correct WebContainer schema.
-- Ensure all JSON string values are properly escaped.
+CRITICAL: Do NOT output JSON. You must use the following XML-like tagging structure to output your response. 
 
-Return JSON in this exact format:
-{
-  "summary": "A short, clear description of what was changed or added",
-  "updatedFiles": {
-    "src": {
-      "directory": {
-        "App.jsx": {
-          "file": {
-            "contents": "Full updated source code here..."
-          }
-        },
-        "components": {
-          "directory": {
-            "Header.jsx": {
-              "file": {
-                "contents": "Full updated source code here..."
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`;
+Provide the project metadata in a <project> tag, and wrap every file inside a <file> tag with a "path" attribute. 
 
-function mergeNode(
-  target: TreeNode,
-  source: TreeNode
-): TreeNode {
-  // File replacement
-  if (source.file) {
-    return {
-      file: source.file,
-    };
-  }
-
-  // Directory merge
-  if (source.directory) {
-    const mergedDirectory = {
-      ...(target.directory ?? {}),
-    };
-
-    for (const key in source.directory) {
-      mergedDirectory[key] = mergeNode(
-        mergedDirectory[key] ?? {},
-        source.directory[key]
-      );
-    }
-
-    return {
-      directory: mergedDirectory,
-    };
-  }
-
-  return target;
+Output format:
+<project name="Your Project Name" description="A short summary of the task done">
+  <file path="app/routes/home.tsx">
+    import { useState } from 'react';
+    // ... raw, unescaped code goes here
+  </file>
+  <file path="components/ui/custom-button.tsx">
+    // ... raw, unescaped code goes here
+  </file>
+</project>
+`
+interface AiResponse {
+  name: string,
+  description: string,
+  files: Record<string, string>
 }
 
-export function deepMerge(
-  target: FileSystemTree,
-  source: FileSystemTree
-): FileSystemTree {
-  const merged: FileSystemTree = {
-    ...target,
+function parseAiResponse(aiText: string) {
+  const projectRegex = /<project\s+name="([^"]+)"\s+description="([^"]+)">/i;
+  const projectMatch = aiText.match(projectRegex);
+
+  const result: AiResponse = {
+    name: projectMatch ? projectMatch[1] : 'Untitled',
+    description: projectMatch ? projectMatch[2] : '',
+    files: {}
   };
 
-  for (const key in source) {
-    merged[key] = mergeNode(
-      merged[key] ?? {},
-      source[key]
-    );
+  const fileRegex = /<file\s+path="([^"]+)">([\s\S]*?)<\/file>/gi;
+  let match;
+
+  while ((match = fileRegex.exec(aiText)) !== null) {
+    const filePath = match[1];
+    const fileContent = match[2].trim();
+    result.files[filePath] = fileContent;
   }
 
-  return merged;
+  return result;
+}
+
+function mergeAiFiles(currentFiles: FileTree, newFiles: FileTree): FileTree {
+  // 1. Create a shallow copy to maintain immutability (best practice for React/State)
+  const mergedFiles = { ...currentFiles };
+
+  // 2. Iterate through the newly generated files
+  for (const [filePath, fileContent] of Object.entries(newFiles)) {
+    const trimmedContent = fileContent.trim();
+
+    // 3. Handle Deletions: Allow the AI to delete a file by returning an empty string
+    if (trimmedContent === "") {
+      delete mergedFiles[filePath];
+    } else {
+      // 4. Handle Additions & Updates: Overwrite existing or create new
+      mergedFiles[filePath] = fileContent;
+    }
+  }
+
+  return mergedFiles;
 }
 
 export const buildCode = inngest.createFunction(
-    {
-        id: "buildCode",
-        triggers: { event: "buildCode" },
-        retries: 1,
-        onFailure: async ({ event, error }) => {
-
-            const originalEvent = event.data.event;
-            const projectId = originalEvent.data.projectId;
-
-            console.log(projectId);
-
-            await pusherServer.trigger(
-                String(projectId),
-                "build-status",
-                {
-                    status: "failed",
-                    message: error.message,
-                    timestamp: Date.now(),
-                }
-            );
-
-            await prisma.project.update({
-                where: {
-                    id: projectId
-                },
-                data: {
-                    status: 'FAILED'
-                }
-            })
-        }
+  {
+    id: "buildCode",
+    triggers: { event: "buildCode" },
+    rateLimit: {
+      limit: 2,
+      period: "1m",
     },
-    async ({ event, step }) => {
-        const { userReq, projectId } = event.data;
+    retries: 1,
+    onFailure: async ({ event, error }) => {
+      const originalEvent = event.data.event;
+      const projectId = originalEvent.data.projectId;
 
-        await pusherServer.trigger(projectId.toString(), 'build-status', {
-            text: 'Generation started.',
-            status: 'generating',
-            timestamp: Date.now(),
-        })
+      console.log(projectId);
 
-        const response = await step.run('generating response', async () => {
-            const model = genAI.getGenerativeModel({
-                model: "gemini-2.5-flash",
-                systemInstruction: CodeBuildSystemPrompt,
-            });
+      await pusherServer.trigger(
+        String(projectId),
+        "build-status",
+        {
+          status: "failed",
+          message: error.message,
+          timestamp: Date.now(),
+        }
+      );
 
-            const result = await model.generateContent({
-                contents: [{ role: "user", parts: [{ text: userReq }] }],
-                generationConfig: { responseMimeType: "application/json" },
-            });
-
-            return JSON.parse(result.response.text())
-        })
-
-        await step.run("update-db-project", async () => {
-            return await prisma.project.update({
-                where: { id: Number(projectId) },
-                data: {
-                    name: response.name,
-                    description: response.description,
-                    files: JSON.stringify(response.files),
-                    status: 'COMPLETED',
-                },
-            });
-        });
-
-        await step.run("create-chat-message", async () => {
-            await prisma.message.create({
-                data: {
-                    message: "Created " + response.description,
-                    role: "AI",
-                    projectId: projectId
-                },
-            });
-        });
-
-        await pusherServer.trigger(
-            projectId.toString(),
-            "build-status",
-            {
-                status: "completed",
-                message: "Project saved successfully.",
-                timestamp: Date.now(),
-            }
-        )
+      await prisma.project.update({
+        where: {
+          id: projectId
+        },
+        data: {
+          status: 'FAILED'
+        }
+      })
     }
+  },
+  async ({ event, step }) => {
+    const { userReq, projectId } = event.data;
+
+    await pusherServer.trigger(projectId.toString(), 'build-status', {
+      text: 'Generation started.',
+      status: 'generating',
+      timestamp: Date.now(),
+    })
+
+    let tokenCount: number | undefined = 0
+
+    const response = await step.run('generating response', async () => {
+      const model = genAI.getGenerativeModel({
+        model: "gemini-3.1-flash-lite",
+        systemInstruction: CodeBuildSystemPrompt,
+      });
+
+      const response = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: userReq }] }]
+      });
+
+      const resTokenCount = response.response.usageMetadata?.totalTokenCount
+      tokenCount = resTokenCount
+
+      return response.response.text()
+    })
+
+    const result = await step.run('parsing response', async () => {
+      if (!response) {
+        console.log("No response candidates returned");
+        return;
+      }
+
+      return parseAiResponse(response)
+    })
+
+    const mergedResult = await step.run('merge response', async () => {
+      if (!result) {
+        return
+      }
+
+      const project = await prisma.project.findFirst({
+        where: {
+          id: Number(projectId)
+        }
+      })
+
+      const currentFiles = JSON.parse(project?.files || '')
+
+      const mergedFiles = mergeAiFiles(currentFiles, result.files)
+
+      return mergedFiles
+    })
+
+    await step.run("update-db-project", async () => {
+      if (!result) return
+
+      const project = await prisma.project.update({
+        where: { id: Number(projectId) },
+        data: {
+          name: result.name,
+          description: result.description,
+          files: JSON.stringify(mergedResult),
+          status: 'COMPLETED',
+        },
+      });
+
+      await prisma.user.update({
+        where: {
+          id: project.authorId
+        },
+        data: {
+          token: {
+            decrement: tokenCount
+          }
+        }
+      })
+
+      return project
+    });
+
+    await step.run("create-chat-message", async () => {
+      if (!result) {
+        return
+      }
+
+      await prisma.message.create({
+        data: {
+          message: "Created " + result.description,
+          role: "AI",
+          projectId: projectId
+        },
+      });
+    });
+
+    await pusherServer.trigger(
+      projectId.toString(),
+      "build-status",
+      {
+        status: "completed",
+        message: "Project saved successfully.",
+        timestamp: Date.now(),
+      }
+    )
+  }
 )
 
 export const editCode = inngest.createFunction(
-    {
-        id: "editCode",
-        triggers: { event: "editCode" },
-        retries: 1,
-        onFailure: async ({ event, error }) => {
+  {
+    id: "editCode",
+    triggers: { event: "editCode" },
+    retries: 1,
+    onFailure: async ({ event, error }) => {
 
-            const originalEvent = event.data.event;
-            const projectId = originalEvent.data.projectId;
+      const originalEvent = event.data.event;
+      const projectId = originalEvent.data.projectId;
 
-            console.log(projectId);
+      console.log(projectId);
 
-            await pusherServer.trigger(
-                String(projectId),
-                "build-status",
-                {
-                    status: "failed",
-                    message: error.message,
-                    timestamp: Date.now(),
-                }
-            );
-
-            await prisma.project.update({
-                where: {
-                    id: projectId
-                },
-                data: {
-                    status: 'FAILED'
-                }
-            })
+      await pusherServer.trigger(
+        String(projectId),
+        "build-status",
+        {
+          status: "failed",
+          message: error.message,
+          timestamp: Date.now(),
         }
-    },
+      );
 
-    async ({ event, step }) => {
-        const { userReq, projectId } = event.data;
-
-        await pusherServer.trigger(projectId.toString(), 'build-status', {
-            text: 'Generation started.',
-            status: 'generating',
-            timestamp: Date.now(),
-        })
-
-        const project = await step.run(
-            "get-project",
-            async () => {
-                return prisma.project.findUnique({
-                    where: {
-                        id: Number(projectId),
-                    },
-                });
-            }
-        );
-
-        if (!project) {
-            throw new Error("Project not found");
+      await prisma.project.update({
+        where: {
+          id: projectId
+        },
+        data: {
+          status: 'FAILED'
         }
-
-        const existingFiles = JSON.parse(project.files as string);
-
-        const response = await step.run('generating response', async () => {
-            const model = genAI.getGenerativeModel({
-                model: "gemini-2.5-flash",
-                systemInstruction: EditCodeSystemPrompt,
-            });
-
-            const result = await model.generateContent({
-                contents: [
-                    {
-                        role: "user",
-                        parts: [
-                            {
-                                text: `
-                                    Current Project:
-                                    ${JSON.stringify(existingFiles)}
-
-                                    User Request:
-                                    ${userReq}
-                                `,
-                            },
-                        ],
-                    },
-                ],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                },
-            });
-
-            return JSON.parse(result.response.text())
-        })
-
-        const mergedFiles = deepMerge(
-            structuredClone(existingFiles),
-            response.updatedFiles
-        );
-
-        await prisma.project.update({
-            where: {
-                id: Number(projectId),
-            },
-            data: {
-                files: JSON.stringify(mergedFiles),
-                status: 'COMPLETED'
-            },
-        });
-
-        await prisma.message.create({
-            data: {
-                message: response.summary,
-                role: "AI",
-                projectId,
-            },
-        });
-
-        await pusherServer.trigger(
-            projectId.toString(),
-            "build-status",
-            {
-                status: "completed",
-                message: "Project saved successfully.",
-                timestamp: Date.now(),
-            }
-        )
+      })
     }
+  },
+
+  async ({ event, step }) => {
+    const { userReq, projectId } = event.data;
+    let tokenCount: number | undefined = 0
+
+    await pusherServer.trigger(projectId.toString(), 'build-status', {
+      text: 'Generation started.',
+      status: 'generating',
+      timestamp: Date.now(),
+    })
+
+    const project = await step.run(
+      "get-project",
+      async () => {
+        return prisma.project.findUnique({
+          where: {
+            id: Number(projectId),
+          },
+        });
+      }
+    );
+
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    const existingFiles = JSON.parse(project.files as string);
+
+    const routeDir = Object.entries(existingFiles).filter(([path]) => {
+      const parts = path.split("/");
+      return parts[0] === "app" && parts[parts.length - 1].startsWith("route.");
+    });
+
+    const response = await step.run('generating response', async () => {
+      const model = genAI.getGenerativeModel({
+        model: "gemini-3.1-flash-lite",
+        systemInstruction: EditCodeSystemPrompt,
+      });
+
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `
+                    Current 'app/route' files:
+                    ${JSON.stringify(routeDir)}
+
+                    User Request:
+                    ${userReq}
+                `,
+              },
+            ],
+          },
+        ],
+      });
+
+      const resTokenCount = result.response.usageMetadata?.totalTokenCount
+      tokenCount = resTokenCount
+
+      return result.response.text()
+    })
+
+    const result = await step.run('parsing response', async () => {
+      if (!response) {
+        console.log("No response candidates returned");
+        return;
+      }
+
+      return parseAiResponse(response)
+    })
+
+    const mergedResult = await step.run('merge response', async () => {
+      if (!result) {
+        return
+      }
+
+      const project = await prisma.project.findFirst({
+        where: {
+          id: Number(projectId)
+        }
+      })
+
+      const currentFiles = JSON.parse(project?.files || '')
+
+      const mergedFiles = mergeAiFiles(currentFiles, result.files)
+
+      return mergedFiles
+    })
+
+    await step.run('updating-db', async () => {
+      await prisma.project.update({
+        where: {
+          id: Number(projectId),
+        },
+        data: {
+          files: JSON.stringify(mergedResult),
+          status: 'COMPLETED'
+        },
+      });
+
+      await prisma.user.update({
+        where: {
+          id: project.authorId
+        },
+        data: {
+          token: {
+            decrement: tokenCount
+          }
+        }
+      })
+
+      await prisma.message.create({
+        data: {
+          message: result?.description || '',
+          role: "AI",
+          projectId,
+        },
+      });
+    })
+
+    await pusherServer.trigger(
+      projectId.toString(),
+      "build-status",
+      {
+        status: "completed",
+        message: "Project saved successfully.",
+        timestamp: Date.now(),
+      }
+    )
+  }
 )

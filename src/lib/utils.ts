@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { FileSystemTree } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -29,6 +30,41 @@ export function timeAgo(timestamp: string | number | Date) {
     return Math.floor(interval) + " minutes ago";
   }
   return Math.floor(seconds) + " seconds ago";
+}
+
+export function convertToWebContainerFormat(flatFiles: Record<string, string>): FileSystemTree {
+  const tree: FileSystemTree = {};
+
+  for (const [filePath, contents] of Object.entries(flatFiles)) {
+    // Split the path and remove any empty strings (e.g., from leading slashes)
+    const parts = filePath.split('/').filter(Boolean);
+    let currentLevel = tree;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLastPart = i === parts.length - 1;
+
+      if (isLastPart) {
+        // It's a file
+        currentLevel[part] = {
+          file: {
+            contents: contents
+          }
+        };
+      } else {
+        // It's a directory
+        if (!currentLevel[part]) {
+          currentLevel[part] = {
+            directory: {}
+          };
+        }
+        // Move down a level into the directory
+        currentLevel = currentLevel[part].directory ?? {};
+      }
+    }
+  }
+
+  return tree;
 }
 
 export const getLanguageFromFileName = (fileName: string) => {
@@ -106,3 +142,18 @@ export const getLanguageFromFileName = (fileName: string) => {
       return "plaintext";
   }
 };
+
+export const getStatusStyles = (status?: string) => {
+  if (!status) return { text: "text-zinc-500", dot: "bg-zinc-500" }
+
+  switch (status) {
+    case "COMPLETED":
+      return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
+    case "LIVE":
+      return { text: "text-[var(--color-status-live)]", dot: "bg-[var(--color-status-live)]" }
+    case "DRAFT":
+      return { text: "text-[var(--color-status-draft)]", dot: "bg-[var(--color-status-draft)]" }
+    default:
+      return { text: "text-[var(--color-status-token)]", dot: "bg-[var(--color-status-token)]" }
+  }
+}

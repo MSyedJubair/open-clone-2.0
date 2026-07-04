@@ -5,6 +5,7 @@ import { TRPCReactProvider } from "@/trpc/client";
 import DirectoryContextProvider from "@/context/DirectoryContextProvider";
 import { Toaster } from "sonner";
 import ProjectContextProvider from "@/context/ProjectContextProvider";
+import WebContainerContextProvider from "@/context/WebContainerContextProvider";
 
 const monstSerrat = Montserrat()
 
@@ -27,8 +28,10 @@ export default function RootLayout({
         <TRPCReactProvider>
           <DirectoryContextProvider>
             <ProjectContextProvider>
-              {children}
-              <Toaster />
+              <WebContainerContextProvider>
+                {children}
+                <Toaster />
+              </WebContainerContextProvider>
             </ProjectContextProvider>
           </DirectoryContextProvider>
         </TRPCReactProvider>
