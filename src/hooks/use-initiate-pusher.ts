@@ -25,20 +25,7 @@ export function useInitiatePusher(projectId: number) {
         type data = { text: string, timeStamp: number, status: string }
 
         channel.bind('build-status', (data: data) => {
-            console.log(data)
-            if (data.status === 'generating') {
-                toast('Building the project. You can close your browser or do something else.')
-
-            } else if (data.status === 'completed') {
-                toast('Generation completed. Updating your project...')
-                queryclient.invalidateQueries({ queryKey: projectQueryKey })
-                queryclient.invalidateQueries({ queryKey: messageQueryKey })
-
-            } else if (data.status === 'failed') {
-                toast('Generation failed. Please try again later.')
-                queryclient.invalidateQueries({ queryKey: projectQueryKey })
-                queryclient.invalidateQueries({ queryKey: messageQueryKey })
-            }
+            toast(data.text) 
         });
 
         return () => {
